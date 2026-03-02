@@ -1,0 +1,117 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import DashboardLayout from './layouts/DashboardLayout';
+
+// Auth Pages
+import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
+
+// Dashboard Pages
+import AdminDashboard from './pages/dashboard/AdminDashboard';
+import UserDashboard from './pages/dashboard/UserDashboard';
+import TechnicianDashboard from './pages/dashboard/TechnicianDashboard';
+
+// Feature Pages
+import FacilitiesPage from './pages/facilities/FacilitiesPage';
+import BookingsPage from './pages/bookings/BookingsPage';
+import MyBookingsPage from './pages/bookings/MyBookingsPage';
+import TicketsPage from './pages/tickets/TicketsPage';
+import MyTicketsPage from './pages/tickets/MyTicketsPage';
+import NotificationsPage from './pages/notifications/NotificationsPage';
+import UsersPage from './pages/users/UsersPage';
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+          
+          {/* Protected Routes with Dashboard Layout */}
+          <Route element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }>
+            {/* Dashboard Routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute roles={['ADMIN', 'USER', 'TECHNICIAN']}>
+                <DashboardContent />
+              </ProtectedRoute>
+            } />
+            
+            {/* Admin Routes */}
+            <Route path="/facilities" element={
+              <ProtectedRoute roles={['ADMIN', 'USER', 'TECHNICIAN']}>
+                <FacilitiesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/bookings" element={
+              <ProtectedRoute roles={['ADMIN']}>
+                <BookingsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/tickets" element={
+              <ProtectedRoute roles={['ADMIN', 'TECHNICIAN']}>
+                <TicketsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/users" element={
+              <ProtectedRoute roles={['ADMIN']}>
+                <UsersPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* User Routes */}
+            <Route path="/my-bookings" element={
+              <ProtectedRoute roles={['ADMIN', 'USER']}>
+                <MyBookingsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/my-tickets" element={
+              <ProtectedRoute roles={['ADMIN', 'USER']}>
+                <MyTicketsPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Shared Routes */}
+            <Route path="/notifications" element={
+              <ProtectedRoute roles={['ADMIN', 'USER', 'TECHNICIAN']}>
+                <NotificationsPage />
+              </ProtectedRoute>
+            } />
+          </Route>
+          
+          {/* Redirects */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
+}
+
+// Dashboard Content Component - renders different dashboard based on role
+import { useAuth } from './context/AuthContext';
+
+const DashboardContent = () => {
+  const { isAdmin, isTechnician } = useAuth();
+  
+  if (isAdmin) {
+    return <AdminDashboard />;
+  } else if (isTechnician) {
+    return <TechnicianDashboard />;
+  } else {
+    return <UserDashboard />;
+  }
+};
+
+export default App;
+
