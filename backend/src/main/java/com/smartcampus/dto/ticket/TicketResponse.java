@@ -1,51 +1,21 @@
-package com.smartcampus.entity;
+package com.smartcampus.dto.ticket;
 
-
-import com.smartcampus.enums.Priority;
-import com.smartcampus.enums.TicketStatus;
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "tickets")
-public class Ticket {
+import com.smartcampus.enums.TicketStatus;
+import com.smartcampus.enums.Priority;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
+public class TicketResponse {
+        private Long id;
     private String title;
-
     private String description;
-
     private String location;
-
     private String reportedBy;
-
     private String assignedTo;
-
-    @Enumerated(EnumType.STRING)
     private TicketStatus status;
-
-    @Enumerated(EnumType.STRING)
     private Priority priority;
-
     private String resolutionNotes;
-
     private LocalDateTime createdAt;
-
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    public void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.status = TicketStatus.OPEN;
-    }
-
-    @PreUpdate
-    public void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
 
     public Long getId() {
         return id;
@@ -126,13 +96,4 @@ public class Ticket {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
 }
-
