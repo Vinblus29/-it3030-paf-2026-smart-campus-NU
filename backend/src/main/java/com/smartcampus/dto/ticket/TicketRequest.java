@@ -6,23 +6,12 @@ import jakarta.validation.constraints.NotNull;
 
 public class TicketRequest {
     
-    @NotBlank(message = "Title is required")
     private String title;
-
-    @NotBlank(message = "Description is required")
     private String description;
-
-    @NotBlank(message = "Category is required")
-    private String category;
-
-    @NotNull(message = "Priority is required")
+    private String location;
+    private String reportedBy;
     private Priority priority;
 
-    private Long facilityId;
-
-    private String attachmentUrl;
-
-    // Getters and Setters
     public String getTitle() {
         return title;
     }
@@ -39,12 +28,20 @@ public class TicketRequest {
         this.description = description;
     }
 
-    public String getCategory() {
-        return category;
+    public String getLocation() {
+        return location;
     }
 
-    public void setCategory(String category) {
-        this.category = category;
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getReportedBy() {
+        return reportedBy;
+    }
+
+    public void setReportedBy(String reportedBy) {
+        this.reportedBy = reportedBy;
     }
 
     public Priority getPriority() {
@@ -55,20 +52,5 @@ public class TicketRequest {
         this.priority = priority;
     }
 
-    public Long getFacilityId() {
-        return facilityId;
-    }
-
-    public void setFacilityId(Long facilityId) {
-        this.facilityId = facilityId;
-    }
-
-    public String getAttachmentUrl() {
-        return attachmentUrl;
-    }
-
-    public void setAttachmentUrl(String attachmentUrl) {
-        this.attachmentUrl = attachmentUrl;
-    }
 }
 

@@ -1,4 +1,4 @@
-package com.smartcampus;
+package com.smartcampus.config;
 
 import com.smartcampus.enums.Role;
 import com.smartcampus.model.User;
