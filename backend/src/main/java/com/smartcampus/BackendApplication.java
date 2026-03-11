@@ -8,9 +8,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class BackendApplication {
 
 	public static void main(String[] args) {
-		// Load .env file from backend directory
+		// Load .env file from current directory
 		Dotenv dotenv = Dotenv.configure()
-			.directory("./backend")
 			.ignoreIfMissing()
 			.load();
 		
