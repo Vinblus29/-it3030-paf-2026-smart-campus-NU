@@ -80,7 +80,8 @@ public class AuthService {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        String token = jwtTokenProvider.generateToken(authentication.getName());
+        // Generate token with extended expiration if rememberMe is true
+        String token = jwtTokenProvider.generateToken(authentication.getName(), request.isRememberMe());
 
         return new AuthResponse(token, mapToUserResponse(user));
     }

@@ -12,6 +12,8 @@ public class LoginRequest {
     @NotBlank(message = "Password is required")
     private String password;
 
+    private boolean rememberMe = false;
+
     // Getters and Setters
     public String getEmail() {
         return email;
@@ -27,6 +29,14 @@ public class LoginRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public boolean isRememberMe() {
+        return rememberMe;
+    }
+
+    public void setRememberMe(boolean rememberMe) {
+        this.rememberMe = rememberMe;
     }
 }
 

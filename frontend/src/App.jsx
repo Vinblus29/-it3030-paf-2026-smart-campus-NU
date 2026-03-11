@@ -8,6 +8,7 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
+import OAuth2Callback from './pages/auth/OAuth2Callback';
 
 // Dashboard Pages
 import AdminDashboard from './pages/dashboard/AdminDashboard';
@@ -33,6 +34,8 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
+          <Route path="/oauth2/callback" element={<OAuth2Callback />} />
+          <Route path="/oauth2/callback/microsoft" element={<OAuth2Callback />} />
           
           {/* Protected Routes with Dashboard Layout */}
           <Route element={
