@@ -3,8 +3,11 @@ package com.smartcampus.entity;
 
 import com.smartcampus.enums.Priority;
 import com.smartcampus.enums.TicketStatus;
+import com.smartcampus.enums.TicketCategory;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "tickets")
@@ -29,6 +32,14 @@ public class Ticket {
 
     @Enumerated(EnumType.STRING)
     private Priority priority;
+
+    @Enumerated(EnumType.STRING)
+    private TicketCategory category;
+
+    @ElementCollection
+    @CollectionTable(name = "ticket_attachments", joinColumns = @JoinColumn(name = "ticket_id"))
+    @Column(name = "image_url")
+    private List<String> imageAttachments = new ArrayList<>();
 
     private String resolutionNotes;
 
@@ -109,6 +120,22 @@ public class Ticket {
 
     public void setPriority(Priority priority) {
         this.priority = priority;
+    }
+
+    public TicketCategory getCategory() {
+        return category;
+    }
+
+    public void setCategory(TicketCategory category) {
+        this.category = category;
+    }
+
+    public List<String> getImageAttachments() {
+        return imageAttachments;
+    }
+
+    public void setImageAttachments(List<String> imageAttachments) {
+        this.imageAttachments = imageAttachments;
     }
 
     public String getResolutionNotes() {

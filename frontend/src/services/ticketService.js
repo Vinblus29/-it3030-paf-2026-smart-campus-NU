@@ -85,6 +85,21 @@ const ticketService = {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     return response.data;
+  },
+
+  // New Phase 1 endpoints
+  getTicketsByCategory: async (category) => {
+    const response = await axios.get(`${API_URL}/category/${category}`);
+    return response.data;
+  },
+
+  uploadImage: async (ticketId, imageFile) => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    const response = await axios.post(`${API_URL}/${ticketId}/upload-image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
   }
 };
 

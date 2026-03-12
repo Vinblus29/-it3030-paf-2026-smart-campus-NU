@@ -11,4 +11,6 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     List<Ticket> findByReportedBy(String reportedBy);
 
     List<Ticket> findByStatus(com.smartcampus.enums.TicketStatus status);
+
+    List<Ticket> findByCategory(com.smartcampus.enums.TicketCategory category);
 }

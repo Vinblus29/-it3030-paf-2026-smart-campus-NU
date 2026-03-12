@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Tag, Space, Modal, message, Card, Select, Drawer, Descriptions, Tabs } from 'antd';
+import { Table, Button, Tag, Space, Modal, message, Card, Select, Drawer, Descriptions, Tabs, Image } from 'antd';
 import { EyeOutlined, CheckOutlined, CloseOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import ticketService from '../../services/ticketService';
+import { getCategoryOptions, getCategoryDisplay } from '../../constants/ticketCategories';
 
 const { Option } = Select;
 
@@ -23,6 +24,9 @@ const TicketsPage = () => {
       let data;
       if (filter === 'ALL') {
         data = await ticketService.getAllTickets();
+      } else if (['ELECTRICAL', 'PLUMBING', 'NETWORK', 'EQUIPMENT', 'CLEANING', 'SECURITY', 'HVAC', 'FURNITURE', 'LIGHTING', 'OTHER'].includes(filter)) {
+        // Check if filter is a category
+        data = await ticketService.getTicketsByCategory(filter);
       } else {
         data = await ticketService.getTicketsByStatus(filter);
       }
@@ -82,6 +86,24 @@ const TicketsPage = () => {
       ),
     },
     {
+      title: 'Category',
+      dataIndex: 'category',
+      key: 'category',
+      render: (category) => {
+        const config = getCategoryDisplay(category);
+        return (
+          <Tag color={config.color}>
+            {config.icon} {config.label}
+          </Tag>
+        );
+      },
+      filters: getCategoryOptions().map(option => ({
+        text: option.label,
+        value: option.value
+      })),
+      onFilter: (value, record) => record.category === value,
+    },
+    {
       title: 'Priority',
       dataIndex: 'priority',
       key: 'priority',
@@ -102,7 +124,7 @@ const TicketsPage = () => {
     {
       title: 'Created By',
       key: 'user',
-      render: (_, record) => record.user?.firstName + ' ' + record.user?.lastName || 'N/A',
+      render: (_, record) => record.user?.firstName + ' ' + record.user?.lastName || record.reportedBy || 'N/A',
     },
     {
       title: 'Created',
@@ -199,6 +221,22 @@ const TicketsPage = () => {
         />
       ),
     },
+    // Category tabs
+    ...getCategoryOptions().slice(0, 5).map(category => ({
+      key: category.value,
+      label: (
+        <span>{category.icon} {category.label} <Tag color={category.color}>{tickets.filter(t => t.category === category.value).length}</Tag></span>
+      ),
+      children: (
+        <Table 
+          columns={columns}
+          dataSource={tickets.filter(t => t.category === category.value)}
+          rowKey="id"
+          loading={loading}
+          pagination={{ pageSize: 10 }}
+        />
+      ),
+    })),
   ];
 
   return (
@@ -230,6 +268,17 @@ const TicketsPage = () => {
           <Descriptions column={1} bordered>
             <Descriptions.Item label="Title">{selectedTicket.title}</Descriptions.Item>
             <Descriptions.Item label="Description">{selectedTicket.description}</Descriptions.Item>
+            <Descriptions.Item label="Location">{selectedTicket.location || 'N/A'}</Descriptions.Item>
+            <Descriptions.Item label="Category">
+              {(() => {
+                const config = getCategoryDisplay(selectedTicket.category);
+                return (
+                  <Tag color={config.color}>
+                    {config.icon} {config.label}
+                  </Tag>
+                );
+              })()}
+            </Descriptions.Item>
             <Descriptions.Item label="Priority">
               <Tag color={getPriorityColor(selectedTicket.priority)}>{selectedTicket.priority}</Tag>
             </Descriptions.Item>
@@ -237,8 +286,26 @@ const TicketsPage = () => {
               <Tag color={getStatusColor(selectedTicket.status)}>{selectedTicket.status}</Tag>
             </Descriptions.Item>
             <Descriptions.Item label="Created By">
-              {selectedTicket.user?.firstName} {selectedTicket.user?.lastName}
+              {selectedTicket.user?.firstName} {selectedTicket.user?.lastName || selectedTicket.reportedBy}
             </Descriptions.Item>
+            
+            {/* Image Attachments */}
+            {selectedTicket.imageAttachments && selectedTicket.imageAttachments.length > 0 && (
+              <Descriptions.Item label="Images">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {selectedTicket.imageAttachments.map((image, index) => (
+                    <Image
+                      key={index}
+                      width={80}
+                      height={80}
+                      src={image}
+                      style={{ objectFit: 'cover', borderRadius: '4px' }}
+                    />
+                  ))}
+                </div>
+              </Descriptions.Item>
+            )}
+            
             <Descriptions.Item label="Created At">
               {selectedTicket.createdAt ? new Date(selectedTicket.createdAt).toLocaleString() : 'N/A'}
             </Descriptions.Item>

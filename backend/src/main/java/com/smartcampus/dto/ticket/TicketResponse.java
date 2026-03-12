@@ -1,9 +1,11 @@
 package com.smartcampus.dto.ticket;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.smartcampus.enums.TicketStatus;
 import com.smartcampus.enums.Priority;
+import com.smartcampus.enums.TicketCategory;
 
 public class TicketResponse {
         private Long id;
@@ -14,6 +16,8 @@ public class TicketResponse {
     private String assignedTo;
     private TicketStatus status;
     private Priority priority;
+    private TicketCategory category;
+    private List<String> imageAttachments;
     private String resolutionNotes;
     private LocalDateTime createdAt;
 
@@ -79,6 +83,22 @@ public class TicketResponse {
 
     public void setPriority(Priority priority) {
         this.priority = priority;
+    }
+
+    public TicketCategory getCategory() {
+        return category;
+    }
+
+    public void setCategory(TicketCategory category) {
+        this.category = category;
+    }
+
+    public List<String> getImageAttachments() {
+        return imageAttachments;
+    }
+
+    public void setImageAttachments(List<String> imageAttachments) {
+        this.imageAttachments = imageAttachments;
     }
 
     public String getResolutionNotes() {

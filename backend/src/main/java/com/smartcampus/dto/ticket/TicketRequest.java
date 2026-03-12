@@ -1,8 +1,10 @@
 package com.smartcampus.dto.ticket;
 
 import com.smartcampus.enums.Priority;
+import com.smartcampus.enums.TicketCategory;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.util.List;
 
 public class TicketRequest {
     
@@ -11,6 +13,8 @@ public class TicketRequest {
     private String location;
     private String reportedBy;
     private Priority priority;
+    private TicketCategory category;
+    private List<String> imageAttachments;
 
     public String getTitle() {
         return title;
@@ -50,6 +54,22 @@ public class TicketRequest {
 
     public void setPriority(Priority priority) {
         this.priority = priority;
+    }
+
+    public TicketCategory getCategory() {
+        return category;
+    }
+
+    public void setCategory(TicketCategory category) {
+        this.category = category;
+    }
+
+    public List<String> getImageAttachments() {
+        return imageAttachments;
+    }
+
+    public void setImageAttachments(List<String> imageAttachments) {
+        this.imageAttachments = imageAttachments;
     }
 
 }

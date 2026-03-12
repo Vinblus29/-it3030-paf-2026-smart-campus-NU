@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Card, Table, Button, Tag, Space, Modal, message, Empty, Drawer, Descriptions, Form, Input, Select } from 'antd';
+import { Card, Table, Button, Tag, Space, Modal, message, Empty, Drawer, Descriptions, Form, Input, Select, Image } from 'antd';
 import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import ticketService from '../../services/ticketService';
+import ImageUpload from '../../components/ImageUpload';
+import { getCategoryOptions, getCategoryDisplay } from '../../constants/ticketCategories';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -34,12 +36,25 @@ const MyTicketsPage = () => {
   const handleCreateTicket = async (values) => {
     setSubmitting(true);
     try {
-      await ticketService.createTicket(values);
+      // Convert uploaded images to URLs for backend
+      const imageAttachments = values.imageAttachments?.map(img => img.url) || [];
+      
+      const ticketData = {
+        title: values.title,
+        description: values.description,
+        priority: values.priority,
+        category: values.category,
+        location: values.location,
+        imageAttachments
+      };
+
+      await ticketService.createTicket(ticketData);
       message.success('Ticket created successfully');
       setCreateModalVisible(false);
       form.resetFields();
       fetchTickets();
     } catch (error) {
+      console.error('Error creating ticket:', error);
       message.error('Failed to create ticket');
     } finally {
       setSubmitting(false);
@@ -81,6 +96,24 @@ const MyTicketsPage = () => {
           <div className="text-gray-400 text-sm">{record.description?.substring(0, 50)}...</div>
         </div>
       ),
+    },
+    {
+      title: 'Category',
+      dataIndex: 'category',
+      key: 'category',
+      render: (category) => {
+        const config = getCategoryDisplay(category);
+        return (
+          <Tag color={config.color}>
+            {config.icon} {config.label}
+          </Tag>
+        );
+      },
+      filters: getCategoryOptions().map(option => ({
+        text: option.label,
+        value: option.value
+      })),
+      onFilter: (value, record) => record.category === value,
     },
     {
       title: 'Priority',
@@ -164,12 +197,41 @@ const MyTicketsPage = () => {
           <Descriptions column={1} bordered>
             <Descriptions.Item label="Title">{selectedTicket.title}</Descriptions.Item>
             <Descriptions.Item label="Description">{selectedTicket.description}</Descriptions.Item>
+            <Descriptions.Item label="Location">{selectedTicket.location || 'N/A'}</Descriptions.Item>
+            <Descriptions.Item label="Category">
+              {(() => {
+                const config = getCategoryDisplay(selectedTicket.category);
+                return (
+                  <Tag color={config.color}>
+                    {config.icon} {config.label}
+                  </Tag>
+                );
+              })()}
+            </Descriptions.Item>
             <Descriptions.Item label="Priority">
               <Tag color={getPriorityColor(selectedTicket.priority)}>{selectedTicket.priority}</Tag>
             </Descriptions.Item>
             <Descriptions.Item label="Status">
               <Tag color={getStatusColor(selectedTicket.status)}>{selectedTicket.status}</Tag>
             </Descriptions.Item>
+            
+            {/* Image Attachments */}
+            {selectedTicket.imageAttachments && selectedTicket.imageAttachments.length > 0 && (
+              <Descriptions.Item label="Images">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {selectedTicket.imageAttachments.map((image, index) => (
+                    <Image
+                      key={index}
+                      width={80}
+                      height={80}
+                      src={image}
+                      style={{ objectFit: 'cover', borderRadius: '4px' }}
+                    />
+                  ))}
+                </div>
+              </Descriptions.Item>
+            )}
+            
             <Descriptions.Item label="Created At">
               {selectedTicket.createdAt ? new Date(selectedTicket.createdAt).toLocaleString() : 'N/A'}
             </Descriptions.Item>
@@ -214,6 +276,28 @@ const MyTicketsPage = () => {
           </Form.Item>
 
           <Form.Item
+            name="location"
+            label="Location"
+            rules={[{ required: true, message: 'Please enter a location' }]}
+          >
+            <Input placeholder="Where is the issue located?" />
+          </Form.Item>
+
+          <Form.Item
+            name="category"
+            label="Category"
+            rules={[{ required: true, message: 'Please select a category' }]}
+          >
+            <Select placeholder="Select category">
+              {getCategoryOptions().map(option => (
+                <Option key={option.value} value={option.value}>
+                  <Tag color={option.color}>{option.label}</Tag>
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
             name="priority"
             label="Priority"
             rules={[{ required: true, message: 'Please select priority' }]}
@@ -223,6 +307,16 @@ const MyTicketsPage = () => {
               <Option value="MEDIUM">Medium</Option>
               <Option value="HIGH">High</Option>
             </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="imageAttachments"
+            label="Images (Optional)"
+          >
+            <ImageUpload 
+              maxCount={3}
+              maxSize={5 * 1024 * 1024} // 5MB
+            />
           </Form.Item>
 
           <Form.Item>
