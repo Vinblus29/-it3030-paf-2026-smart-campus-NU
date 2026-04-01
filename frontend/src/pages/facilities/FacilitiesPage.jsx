@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Card, Table, Button, Space, Tag, Modal, message, Row, Col, Input } from 'antd';
-import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, EyeOutlined } from '@ant-design/icons';
-import facilityService from '../../services/facilityService';
+import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, EyeOutlined, CalendarOutlined } from '@ant-design/icons';
+import facilityService from '../../services/facilityService'; 
+import BookingModal from '../../components/BookingModal'; // Import the new component 
 
 const FacilitiesPage = () => {
   const [facilities, setFacilities] = useState([]);
@@ -9,6 +10,7 @@ const FacilitiesPage = () => {
   const [searchText, setSearchText] = useState('');
   const [selectedFacility, setSelectedFacility] = useState(null);
   const [viewModalVisible, setViewModalVisible] = useState(false);
+  const [bookingModalVisible, setBookingModalVisible] = useState(false); // Add state for booking modal
 
   useEffect(() => {
     fetchFacilities();
@@ -33,6 +35,11 @@ const FacilitiesPage = () => {
   const handleView = (facility) => {
     setSelectedFacility(facility);
     setViewModalVisible(true);
+  };
+
+  const handleBook = (facility) => {
+    setSelectedFacility(facility);
+    setBookingModalVisible(true);
   };
 
   const filteredFacilities = facilities.filter(facility => 
@@ -79,12 +86,6 @@ const FacilitiesPage = () => {
       ),
     },
     {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-      render: (desc) => desc?.substring(0, 50) + '...' || '-',
-    },
-    {
       title: 'Actions',
       key: 'actions',
       render: (_, record) => (
@@ -94,7 +95,16 @@ const FacilitiesPage = () => {
             size="small"
             onClick={() => handleView(record)}
           >
-            View
+            Details
+          </Button>
+          <Button 
+            type="primary"
+            icon={<CalendarOutlined />} 
+            size="small"
+            disabled={!record.available}
+            onClick={() => handleBook(record)}
+          >
+            Book Now
           </Button>
         </Space>
       ),
@@ -107,7 +117,7 @@ const FacilitiesPage = () => {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Facilities</h1>
-            <p className="text-gray-500">Manage campus facilities</p>
+            <p className="text-gray-500">View and book campus facilities</p>
           </div>
           <Input
             placeholder="Search facilities..."
@@ -135,26 +145,40 @@ const FacilitiesPage = () => {
         footer={[
           <Button key="close" onClick={() => setViewModalVisible(false)}>
             Close
-          </Button>
+          </Button>,
+          selectedFacility?.available && (
+            <Button 
+              key="book" 
+              type="primary" 
+              onClick={() => {
+                setViewModalVisible(false);
+                handleBook(selectedFacility);
+              }}
+            >
+              Book Now
+            </Button>
+          )
         ]}
       >
         {selectedFacility && (
           <div className="space-y-4">
             <div>
               <label className="text-gray-500">Name:</label>
-              <p className="font-medium">{selectedFacility.name}</p>
+              <p className="font-medium text-lg">{selectedFacility.name}</p>
             </div>
-            <div>
-              <label className="text-gray-500">Type:</label>
-              <p className="font-medium">{selectedFacility.type || 'General'}</p>
-            </div>
+            <Row gutter={16}>
+              <Col span={12}>
+                <label className="text-gray-500">Type:</label>
+                <p className="font-medium">{selectedFacility.type || 'General'}</p>
+              </Col>
+              <Col span={12}>
+                <label className="text-gray-500">Capacity:</label>
+                <p className="font-medium">{selectedFacility.capacity || 'N/A'}</p>
+              </Col>
+            </Row>
             <div>
               <label className="text-gray-500">Location:</label>
               <p className="font-medium">{selectedFacility.location || 'N/A'}</p>
-            </div>
-            <div>
-              <label className="text-gray-500">Capacity:</label>
-              <p className="font-medium">{selectedFacility.capacity || 'N/A'}</p>
             </div>
             <div>
               <label className="text-gray-500">Availability:</label>
@@ -171,6 +195,17 @@ const FacilitiesPage = () => {
           </div>
         )}
       </Modal>
+
+      {/* Booking Modal */}
+      <BookingModal
+        visible={bookingModalVisible}
+        facility={selectedFacility}
+        onCancel={() => setBookingModalVisible(false)}
+        onSuccess={() => {
+          setBookingModalVisible(false);
+          fetchFacilities(); // Refresh facility list or message.success is already in child
+        }}
+      />
     </div>
   );
 };
