@@ -32,6 +32,11 @@ public class FacilityController {
         return ResponseEntity.ok(facilityService.getFacilitiesByType(type));
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<List<FacilityDTO>> searchFacilities(@RequestParam String q) {
+        return ResponseEntity.ok(facilityService.searchFacilities(q));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<FacilityDTO> getFacilityById(@PathVariable Long id) {
         return ResponseEntity.ok(facilityService.getFacilityById(id));
