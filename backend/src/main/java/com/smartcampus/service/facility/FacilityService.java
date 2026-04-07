@@ -53,7 +53,8 @@ public class FacilityService {
         facility.setDescription(dto.getDescription());
         facility.setImageUrl(dto.getImageUrl());
         facility.setEquipment(dto.getEquipment());
-        facility.setAvailable(true);
+        facility.setAvailabilityWindows(dto.getAvailabilityWindows());
+        facility.setAvailable(dto.isAvailable());
         facility.setCreatedAt(LocalDateTime.now());
 
         facility = facilityRepository.save(facility);
@@ -72,6 +73,8 @@ public class FacilityService {
         facility.setDescription(dto.getDescription());
         facility.setImageUrl(dto.getImageUrl());
         facility.setEquipment(dto.getEquipment());
+        facility.setAvailabilityWindows(dto.getAvailabilityWindows());
+        facility.setAvailable(dto.isAvailable());
         facility.setUpdatedAt(LocalDateTime.now());
 
         facility = facilityRepository.save(facility);
@@ -95,6 +98,12 @@ public class FacilityService {
         facilityRepository.deleteById(id);
     }
 
+    public List<FacilityDTO> searchFacilities(String query) {
+        return facilityRepository.searchFacilities(query).stream()
+            .map(this::mapToDTO)
+            .collect(Collectors.toList());
+    }
+
     private FacilityDTO mapToDTO(Facility facility) {
         FacilityDTO dto = new FacilityDTO();
         dto.setId(facility.getId());
@@ -106,6 +115,7 @@ public class FacilityService {
         dto.setImageUrl(facility.getImageUrl());
         dto.setAvailable(facility.isAvailable());
         dto.setEquipment(facility.getEquipment());
+        dto.setAvailabilityWindows(facility.getAvailabilityWindows());
         dto.setCreatedAt(facility.getCreatedAt());
         return dto;
     }
