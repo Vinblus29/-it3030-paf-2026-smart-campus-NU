@@ -10,6 +10,8 @@ const MyBookingsPage = () => {
   const [loading, setLoading] = useState(true); 
   const [selectedBooking, setSelectedBooking] = useState(null); 
   const [viewModalVisible, setViewModalVisible] = useState(false); 
+  const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [qrBase64, setQrBase64] = useState('');
 
   useEffect(() => { 
     fetchBookings(); 
@@ -56,6 +58,27 @@ const MyBookingsPage = () => {
     }; 
     return colors[status] || 'default'; 
   }; 
+
+  const handleViewQR = async (id) => {
+    try {
+      const base64 = await bookingService.getBookingQR(id);
+      setQrBase64(base64);
+      setQrModalVisible(true);
+    } catch (error) {
+      message.error('Failed to generate QR code');
+    }
+  };
+
+  const handleDownloadQR = () => {
+    if (!qrBase64) return;
+    const link = document.createElement('a');
+    link.href = `data:image/png;base64,${qrBase64}`;
+    link.download = `booking-qr-${selectedBooking?.id || 'code'}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    message.success('QR Code download started');
+  };
 
   const handleView = (booking) => { 
     setSelectedBooking(booking); 
@@ -111,6 +134,18 @@ const MyBookingsPage = () => {
               Cancel 
             </Button> 
           )} 
+          {record.status === 'APPROVED' && !record.checkedIn && (
+            <Button 
+              icon={<CalendarOutlined />} 
+              onClick={() => handleViewQR(record.id)}
+              className="bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100"
+            >
+              View QR
+            </Button>
+          )}
+          {record.checkedIn && (
+            <Tag color="#87d068">Checked In</Tag>
+          )}
         </Space> 
       ), 
     }, 
@@ -257,6 +292,42 @@ const MyBookingsPage = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* QR Code Modal */}
+      <Modal
+        title="Check-in QR Code"
+        open={qrModalVisible}
+        onCancel={() => setQrModalVisible(false)}
+        footer={[
+          <Button key="download" type="primary" onClick={handleDownloadQR}>
+            Download QR
+          </Button>,
+          <Button key="close" onClick={() => setQrModalVisible(false)}>
+            Close
+          </Button>
+        ]}
+        width={350}
+        centered
+      >
+        <div className="text-center p-4">
+          <p className="mb-4 text-gray-500">Show this QR code to the technician/admin at the facility for check-in.</p>
+          <div className="bg-white p-4 rounded-xl shadow-inner inline-block border-2 border-dashed border-blue-200">
+            {qrBase64 ? (
+              <img src={`data:image/png;base64,${qrBase64}`} alt="Booking QR Code" style={{ width: 250, height: 250 }} />
+            ) : (
+              <div style={{ width: 250, height: 250, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                Loading...
+              </div>
+            )}
+          </div>
+          {selectedBooking && (
+            <div className="mt-4">
+              <p className="font-bold text-lg">{selectedBooking.facilityName}</p>
+              <p className="text-gray-500">BK-{selectedBooking.id}</p>
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );

@@ -3,6 +3,7 @@ package com.smartcampus.controller.booking;
 import com.smartcampus.dto.booking.BookingDTO;
 import com.smartcampus.dto.booking.BookingRequest;
 import com.smartcampus.service.booking.BookingService;
+import com.smartcampus.service.booking.QRService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,9 +15,24 @@ import java.util.List;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final QRService qrService;
 
-    public BookingController(BookingService bookingService) {
+    public BookingController(BookingService bookingService, QRService qrService) {
         this.bookingService = bookingService;
+        this.qrService = qrService;
+    }
+
+    @GetMapping("/{id}/qr")
+    public ResponseEntity<String> getBookingQR(@PathVariable Long id) {
+        // Generating a QR code with the booking ID or a unique verification URL
+        String checkInUrl = "CHECKIN:" + id; 
+        String qrCode = qrService.generateQRCode(checkInUrl, 300, 300);
+        return ResponseEntity.ok(qrCode);
+    }
+
+    @PutMapping("/{id}/check-in")
+    public ResponseEntity<BookingDTO> checkInBooking(@PathVariable Long id) {
+        return ResponseEntity.ok(bookingService.checkIn(id));
     }
 
     @GetMapping

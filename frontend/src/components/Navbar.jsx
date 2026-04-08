@@ -12,6 +12,7 @@ const NAV = {
     { to: '/users', label: 'Users' },
     { to: '/map', label: 'Campus Map' },
     { to: '/chat', label: 'Chat' },
+    { to: '/bookings/qr-check-in', label: 'QR Check-in' },
   ],
   USER: [
     { to: '/dashboard', label: 'Dashboard' },
@@ -27,6 +28,7 @@ const NAV = {
     { to: '/facilities', label: 'Facilities' },
     { to: '/map', label: 'Campus Map' },
     { to: '/chat', label: 'Chat' },
+    { to: '/bookings/qr-check-in', label: 'QR Check-in' },
   ],
 };
 
