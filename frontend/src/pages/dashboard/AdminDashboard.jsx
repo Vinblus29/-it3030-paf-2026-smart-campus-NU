@@ -42,17 +42,15 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [facilities, bookings, tickets, userStats] = await Promise.all([
+      const [facilities, bookings, ticketStatsData, userStats] = await Promise.all([
         facilityService.getAllFacilities(),
         bookingService.getAllBookings(),
-        ticketService.getAllTickets(),
+        ticketService.getStats(),       // #1 — use stats endpoint
         axios.get('/api/admin/stats')
       ]);
 
       const pendingBookings = bookings.filter(b => b.status === 'PENDING');
-      const pendingTickets = tickets.filter(t => t.status === 'OPEN' || t.status === 'IN_PROGRESS');
 
-      // Calculate booking stats by status
       const bookingByStatus = {
         APPROVED: bookings.filter(b => b.status === 'APPROVED').length,
         PENDING: bookings.filter(b => b.status === 'PENDING').length,
@@ -60,12 +58,11 @@ const AdminDashboard = () => {
         CANCELLED: bookings.filter(b => b.status === 'CANCELLED').length,
       };
 
-      // Calculate ticket stats by status
       const ticketByStatus = {
-        OPEN: tickets.filter(t => t.status === 'OPEN').length,
-        IN_PROGRESS: tickets.filter(t => t.status === 'IN_PROGRESS').length,
-        RESOLVED: tickets.filter(t => t.status === 'RESOLVED').length,
-        CLOSED: tickets.filter(t => t.status === 'CLOSED').length,
+        OPEN: ticketStatsData.open || 0,
+        IN_PROGRESS: ticketStatsData.inProgress || 0,
+        RESOLVED: ticketStatsData.resolved || 0,
+        CLOSED: ticketStatsData.closed || 0,
       };
 
       setBookingStats(bookingByStatus);
@@ -75,15 +72,17 @@ const AdminDashboard = () => {
         totalFacilities: facilities.length,
         totalBookings: bookings.length,
         pendingBookings: pendingBookings.length,
-        totalTickets: tickets.length,
-        pendingTickets: pendingTickets.length,
+        totalTickets: ticketStatsData.total || 0,
+        pendingTickets: (ticketStatsData.open || 0) + (ticketStatsData.inProgress || 0),
         totalUsers: userStats.data.totalUsers || 0,
         pendingUsers: userStats.data.pendingUsers || 0,
         enabledUsers: userStats.data.enabledUsers || 0
       });
 
+      // recent tickets still need the list — fetch separately but limit
+      const recentList = await ticketService.getAllTickets();
       setRecentBookings(bookings.slice(0, 5));
-      setRecentTickets(tickets.slice(0, 5));
+      setRecentTickets(recentList.slice(0, 5));
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
