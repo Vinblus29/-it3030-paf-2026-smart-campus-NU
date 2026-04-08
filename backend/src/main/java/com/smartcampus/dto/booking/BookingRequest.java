@@ -22,6 +22,10 @@ public class BookingRequest {
 
     private String attachmentUrl;
 
+    private String recurrenceType = "ONCE"; // ONCE, DAILY, WEEKLY, MONTHLY
+    private LocalDateTime recurringUntil;
+    private boolean joinWaitlist = false;
+
     // Getters and Setters
     public Long getFacilityId() {
         return facilityId;
@@ -69,6 +73,30 @@ public class BookingRequest {
 
     public void setAttachmentUrl(String attachmentUrl) {
         this.attachmentUrl = attachmentUrl;
+    }
+
+    public String getRecurrenceType() {
+        return recurrenceType;
+    }
+
+    public void setRecurrenceType(String recurrenceType) {
+        this.recurrenceType = recurrenceType;
+    }
+
+    public LocalDateTime getRecurringUntil() {
+        return recurringUntil;
+    }
+
+    public void setRecurringUntil(LocalDateTime recurringUntil) {
+        this.recurringUntil = recurringUntil;
+    }
+
+    public boolean isJoinWaitlist() {
+        return joinWaitlist;
+    }
+
+    public void setJoinWaitlist(boolean joinWaitlist) {
+        this.joinWaitlist = joinWaitlist;
     }
 }
 
