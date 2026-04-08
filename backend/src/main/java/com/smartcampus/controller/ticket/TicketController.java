@@ -3,11 +3,16 @@ package com.smartcampus.controller.ticket;
 import com.smartcampus.dto.ticket.TicketRequest;
 import com.smartcampus.dto.ticket.TicketResponse;
 import com.smartcampus.dto.ticket.UpdateStatusRequest;
+import com.smartcampus.enums.TicketStatus;
 import com.smartcampus.service.ticket.TicketService;
-
+import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/tickets")
@@ -20,9 +25,25 @@ public class TicketController {
         this.service = service;
     }
 
-    @PostMapping
-    public TicketResponse create(@RequestBody TicketRequest request) {
-        return service.createTicket(request);
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public TicketResponse create(
+            @Valid @RequestPart("ticket") TicketRequest request,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+        return service.createTicket(request, images);
+    }
+
+    @GetMapping("/stats")
+    public Map<String, Object> getStats() {
+        return service.getTicketStats();
+    }
+
+    @GetMapping("/search")
+    public List<TicketResponse> search(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String priority) {
+        return service.searchTickets(q, status, category, priority);
     }
 
     @GetMapping
@@ -30,11 +51,9 @@ public class TicketController {
         return service.getAllTickets();
     }
 
-    @PutMapping("/{id}/status")
-    public TicketResponse updateStatus(
-            @PathVariable Long id,
-            @RequestBody UpdateStatusRequest request) {
-        return service.updateStatus(id, request);
+    @GetMapping("/{id}")
+    public TicketResponse getById(@PathVariable Long id) {
+        return service.getTicketById(id);
     }
 
     @GetMapping("/my-tickets")
@@ -47,9 +66,34 @@ public class TicketController {
         return service.getAssignedTickets();
     }
 
+    @GetMapping("/status/{status}")
+    public List<TicketResponse> getByStatus(@PathVariable TicketStatus status) {
+        return service.getTicketsByStatus(status);
+    }
+
+    @GetMapping("/technicians")
+    public List<Map<String, Object>> getTechnicians() {
+        return service.getTechnicians().stream().map(u -> Map.of(
+                "id", (Object) u.getId(),
+                "name", u.getFirstName() + " " + u.getLastName(),
+                "email", u.getEmail()
+        )).collect(Collectors.toList());
+    }
+
+    @PutMapping("/{id}/status")
+    public TicketResponse updateStatus(@PathVariable Long id,
+                                       @RequestBody UpdateStatusRequest request) {
+        return service.updateStatus(id, request);
+    }
+
+    @PutMapping("/{id}/assign")
+    public TicketResponse assign(@PathVariable Long id,
+                                 @RequestBody Map<String, Long> body) {
+        return service.assignTicket(id, body.get("assigneeId"));
+    }
+
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         service.deleteTicket(id);
     }
 }
-

@@ -1,258 +1,449 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Tag, Space, Modal, message, Card, Select, Drawer, Descriptions, Tabs } from 'antd';
-import { EyeOutlined, CheckOutlined, CloseOutlined, DeleteOutlined } from '@ant-design/icons';
+import {
+  Card, Table, Button, Tag, Modal, message, Drawer, Descriptions,
+  Select, Space, Tabs, Form, Input, List, Avatar, Popconfirm, Typography
+} from 'antd';
+import { EyeOutlined, UserOutlined, EditOutlined, DeleteOutlined, SendOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import ticketService from '../../services/ticketService';
 
 const { Option } = Select;
+const { TextArea } = Input;
+const { Text } = Typography;
 
-const TicketsPage = () => {
+const STATUS_COLOR = { OPEN: 'blue', IN_PROGRESS: 'processing', RESOLVED: 'success', CLOSED: 'default', REJECTED: 'error' };
+const PRIORITY_COLOR = { LOW: 'green', MEDIUM: 'orange', HIGH: 'red', CRITICAL: 'magenta' };
+
+// Statuses admin can set
+const ADMIN_WORKFLOW = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED'];
+
+export default function TicketsPage() {
   const { isAdmin, isTechnician } = useAuth();
   const [tickets, setTickets] = useState([]);
+  const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('ALL');
-  const [selectedTicket, setSelectedTicket] = useState(null);
-  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState('ALL');
+  const [selected, setSelected] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState('');
+  const [editingComment, setEditingComment] = useState(null);
+  const [editText, setEditText] = useState('');
+
+  // Admin status modal state
+  const [statusModal, setStatusModal] = useState(false);
+  const [statusForm] = Form.useForm();
+
+  // Technician status update modal state
+  const [techModal, setTechModal] = useState(false);
+  const [techForm] = Form.useForm();
 
   useEffect(() => {
     fetchTickets();
-  }, [filter]);
+    if (isAdmin) ticketService.getTechnicians().then(setTechnicians).catch(() => {});
+  }, []);
 
   const fetchTickets = async () => {
     try {
-      let data;
-      if (filter === 'ALL') {
-        data = await ticketService.getAllTickets();
-      } else {
-        data = await ticketService.getTicketsByStatus(filter);
-      }
+      // Technician fetches only their assigned tickets; Admin fetches all
+      const data = isTechnician && !isAdmin
+        ? await ticketService.getAssignedTickets()
+        : await ticketService.getAllTickets();
       setTickets(data);
-    } catch (error) {
-      console.error('Error fetching tickets:', error);
-      message.error('Failed to fetch tickets');
-    } finally {
-      setLoading(false);
-    }
+    } catch { message.error('Failed to load tickets'); }
+    finally { setLoading(false); }
   };
 
-  const handleUpdateStatus = async (id, status) => {
+  const fetchComments = async (ticketId) => {
+    try { setComments(await ticketService.getComments(ticketId)); }
+    catch { message.error('Failed to load comments'); }
+  };
+
+  const handleView = async (ticket) => {
+    setSelected(ticket);
+    setDrawerOpen(true);
+    await fetchComments(ticket.id);
+  };
+
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+    setSelected(null);
+    setComments([]);
+    setCommentText('');
+    setEditingComment(null);
+  };
+
+  // Admin: full status update
+  const handleStatusUpdate = async (values) => {
     try {
-      await ticketService.updateTicketStatus(id, status);
-      message.success('Ticket status updated successfully');
+      await ticketService.updateStatus(selected.id, values);
+      message.success('Status updated');
+      setStatusModal(false);
+      statusForm.resetFields();
+      const updated = await ticketService.getTicketById(selected.id);
+      setSelected(updated);
       fetchTickets();
-    } catch (error) {
-      message.error('Failed to update ticket status');
+    } catch { message.error('Failed to update status'); }
+  };
+
+  // Admin: assign ticket to technician
+  const handleAssign = async (assigneeId) => {
+    try {
+      const updated = await ticketService.assignTicket(selected.id, assigneeId);
+      setSelected(updated);
+      fetchTickets();
+      message.success('Ticket assigned to technician');
+    } catch (e) {
+      message.error(e?.response?.data?.message || 'Failed to assign ticket');
     }
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      OPEN: 'blue',
-      IN_PROGRESS: 'processing',
-      RESOLVED: 'success',
-      CLOSED: 'default'
-    };
-    return colors[status] || 'default';
+  // Technician: update status (IN_PROGRESS or RESOLVED)
+  const handleTechStatusUpdate = async (values) => {
+    try {
+      await ticketService.updateStatus(selected.id, values);
+      message.success(
+        values.status === 'RESOLVED'
+          ? 'Ticket resolved. Admin has been notified.'
+          : 'Status updated.'
+      );
+      setTechModal(false);
+      techForm.resetFields();
+      const updated = await ticketService.getTicketById(selected.id);
+      setSelected(updated);
+      fetchTickets();
+    } catch { message.error('Failed to update status'); }
   };
 
-  const getPriorityColor = (priority) => {
-    const colors = {
-      HIGH: 'red',
-      MEDIUM: 'orange',
-      LOW: 'blue'
-    };
-    return colors[priority] || 'default';
+  // Comments
+  const handleAddComment = async () => {
+    if (!commentText.trim()) return;
+    try {
+      const c = await ticketService.addComment(selected.id, commentText.trim());
+      setComments(prev => [...prev, c]);
+      setCommentText('');
+    } catch { message.error('Failed to add comment'); }
   };
 
-  const handleView = (ticket) => {
-    setSelectedTicket(ticket);
-    setDrawerVisible(true);
+  const handleEditComment = async (commentId) => {
+    if (!editText.trim()) return;
+    try {
+      const updated = await ticketService.editComment(selected.id, commentId, editText.trim());
+      setComments(prev => prev.map(c => c.id === commentId ? updated : c));
+      setEditingComment(null);
+    } catch { message.error('Failed to edit comment'); }
   };
+
+  const handleDeleteComment = async (commentId) => {
+    try {
+      await ticketService.deleteComment(selected.id, commentId);
+      setComments(prev => prev.filter(c => c.id !== commentId));
+    } catch { message.error('Failed to delete comment'); }
+  };
+
+  const filtered = (status) => status === 'ALL' ? tickets : tickets.filter(t => t.status === status);
 
   const columns = [
     {
-      title: 'Ticket',
-      dataIndex: 'title',
-      key: 'title',
-      render: (text, record) => (
+      title: 'Ticket', dataIndex: 'title', key: 'title',
+      render: (text, r) => (
         <div>
           <div className="font-medium">{text}</div>
-          <div className="text-gray-400 text-sm">{record.description?.substring(0, 50)}...</div>
+          <Text type="secondary" className="text-xs">{r.category} · {r.location}</Text>
         </div>
-      ),
+      )
+    },
+    // Reporter column only for admin
+    ...(isAdmin ? [{
+      title: 'Reporter', key: 'reporter',
+      render: (_, r) => <span>{r.reporterName || r.reporterEmail || '—'}</span>
+    }] : []),
+    {
+      title: 'Priority', dataIndex: 'priority', key: 'priority',
+      render: p => <Tag color={PRIORITY_COLOR[p]}>{p}</Tag>,
+      filters: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(v => ({ text: v, value: v })),
+      onFilter: (v, r) => r.priority === v,
     },
     {
-      title: 'Priority',
-      dataIndex: 'priority',
-      key: 'priority',
-      render: (priority) => <Tag color={getPriorityColor(priority)}>{priority}</Tag>,
-      filters: [
-        { text: 'High', value: 'HIGH' },
-        { text: 'Medium', value: 'MEDIUM' },
-        { text: 'Low', value: 'LOW' },
-      ],
-      onFilter: (value, record) => record.priority === value,
+      title: 'Status', dataIndex: 'status', key: 'status',
+      render: s => <Tag color={STATUS_COLOR[s]}>{s?.replace('_', ' ')}</Tag>
+    },
+    // Assigned To only for admin
+    ...(isAdmin ? [{
+      title: 'Assigned To', key: 'assignee',
+      render: (_, r) => r.assigneeName || <Text type="secondary">Unassigned</Text>
+    }] : []),
+    {
+      title: 'Created', dataIndex: 'createdAt', key: 'createdAt',
+      render: d => d ? new Date(d).toLocaleDateString() : '-',
+      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
     },
     {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => <Tag color={getStatusColor(status)}>{status}</Tag>,
-    },
-    {
-      title: 'Created By',
-      key: 'user',
-      render: (_, record) => record.user?.firstName + ' ' + record.user?.lastName || 'N/A',
-    },
-    {
-      title: 'Created',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date) => date ? new Date(date).toLocaleDateString() : '-',
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      render: (_, record) => (
-        <Space>
-          <Button 
-            icon={<EyeOutlined />} 
-            size="small"
-            onClick={() => handleView(record)}
-          >
-            View
-          </Button>
-          {(isAdmin || isTechnician) && (
-            <Select
-              value={record.status}
-              onChange={(value) => handleUpdateStatus(record.id, value)}
-              style={{ width: 120 }}
-              size="small"
-            >
-              <Option value="OPEN">Open</Option>
-              <Option value="IN_PROGRESS">In Progress</Option>
-              <Option value="RESOLVED">Resolved</Option>
-              <Option value="CLOSED">Closed</Option>
-            </Select>
-          )}
-        </Space>
-      ),
-    },
+      title: '', key: 'actions',
+      render: (_, r) => (
+        <Button icon={<EyeOutlined />} size="small" onClick={() => handleView(r)}>View</Button>
+      )
+    }
   ];
 
-  const tabItems = [
-    {
-      key: 'ALL',
-      label: 'All Tickets',
-      children: (
-        <Table 
-          columns={columns}
-          dataSource={tickets}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-        />
-      ),
-    },
-    {
-      key: 'OPEN',
-      label: (
-        <span>Open <Tag>{tickets.filter(t => t.status === 'OPEN').length}</Tag></span>
-      ),
-      children: (
-        <Table 
-          columns={columns}
-          dataSource={tickets.filter(t => t.status === 'OPEN')}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-        />
-      ),
-    },
-    {
-      key: 'IN_PROGRESS',
-      label: (
-        <span>In Progress <Tag color="processing">{tickets.filter(t => t.status === 'IN_PROGRESS').length}</Tag></span>
-      ),
-      children: (
-        <Table 
-          columns={columns}
-          dataSource={tickets.filter(t => t.status === 'IN_PROGRESS')}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-        />
-      ),
-    },
-    {
-      key: 'RESOLVED',
-      label: (
-        <span>Resolved <Tag color="success">{tickets.filter(t => t.status === 'RESOLVED').length}</Tag></span>
-      ),
-      children: (
-        <Table 
-          columns={columns}
-          dataSource={tickets.filter(t => t.status === 'RESOLVED')}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-        />
-      ),
-    },
-  ];
+  const tabStatuses = isAdmin
+    ? ['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED']
+    : ['ALL', 'IN_PROGRESS', 'RESOLVED'];
+
+  const tabItems = tabStatuses.map(s => ({
+    key: s,
+    label: s === 'ALL' ? 'All' : (
+      <span>{s.replace('_', ' ')} <Tag color={STATUS_COLOR[s]}>{tickets.filter(t => t.status === s).length}</Tag></span>
+    ),
+    children: (
+      <Table columns={columns} dataSource={filtered(s)} rowKey="id"
+        loading={loading} pagination={{ pageSize: 10 }} />
+    )
+  }));
+
+  // Drawer extra button — different per role
+  const drawerExtra = selected && (
+    isAdmin ? (
+      <Button type="primary"
+        onClick={() => { setStatusModal(true); statusForm.setFieldsValue({ status: selected.status }); }}>
+        Update Status
+      </Button>
+    ) : (
+      // Technician can update status on their assigned tickets (only if already IN_PROGRESS)
+      selected.status === 'IN_PROGRESS' && (
+        <Button type="primary" icon={<CheckCircleOutlined />}
+          onClick={() => { setTechModal(true); techForm.setFieldsValue({ status: selected.status }); }}>
+          Update Status
+        </Button>
+      )
+    )
+  );
 
   return (
     <div className="space-y-6">
       <Card>
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Tickets Management</h1>
-            <p className="text-gray-500">Manage support tickets</p>
-          </div>
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-gray-800">
+            {isAdmin ? 'Ticket Management' : 'My Assigned Tickets'}
+          </h1>
+          <p className="text-gray-500">
+            {isAdmin ? 'View all tickets and assign to technicians' : 'Tickets assigned to you'}
+          </p>
         </div>
-
-        <Tabs 
-          activeKey={filter} 
-          onChange={setFilter}
-          items={tabItems}
-        />
+        <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
       </Card>
 
-      {/* Ticket Details Drawer */}
+      {/* Ticket Detail Drawer */}
       <Drawer
-        title="Ticket Details"
+        title={selected ? `Ticket #${selected.id} — ${selected.title}` : 'Ticket Details'}
         placement="right"
-        width={500}
-        open={drawerVisible}
-        onClose={() => setDrawerVisible(false)}
+        width={600}
+        open={drawerOpen}
+        onClose={closeDrawer}
+        extra={drawerExtra}
       >
-        {selectedTicket && (
-          <Descriptions column={1} bordered>
-            <Descriptions.Item label="Title">{selectedTicket.title}</Descriptions.Item>
-            <Descriptions.Item label="Description">{selectedTicket.description}</Descriptions.Item>
-            <Descriptions.Item label="Priority">
-              <Tag color={getPriorityColor(selectedTicket.priority)}>{selectedTicket.priority}</Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="Status">
-              <Tag color={getStatusColor(selectedTicket.status)}>{selectedTicket.status}</Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="Created By">
-              {selectedTicket.user?.firstName} {selectedTicket.user?.lastName}
-            </Descriptions.Item>
-            <Descriptions.Item label="Created At">
-              {selectedTicket.createdAt ? new Date(selectedTicket.createdAt).toLocaleString() : 'N/A'}
-            </Descriptions.Item>
-            {selectedTicket.updatedAt && (
-              <Descriptions.Item label="Updated At">
-                {new Date(selectedTicket.updatedAt).toLocaleString()}
+        {selected && (
+          <div className="space-y-6">
+            <Descriptions column={1} bordered size="small">
+              <Descriptions.Item label="Status">
+                <Tag color={STATUS_COLOR[selected.status]}>{selected.status?.replace('_', ' ')}</Tag>
               </Descriptions.Item>
+              <Descriptions.Item label="Priority">
+                <Tag color={PRIORITY_COLOR[selected.priority]}>{selected.priority}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Category">{selected.category}</Descriptions.Item>
+              <Descriptions.Item label="Location">{selected.location}</Descriptions.Item>
+              <Descriptions.Item label="Description">{selected.description}</Descriptions.Item>
+              <Descriptions.Item label="Contact">{selected.contactDetails || '—'}</Descriptions.Item>
+              {isAdmin && (
+                <Descriptions.Item label="Reporter">
+                  {selected.reporterName} ({selected.reporterEmail})
+                </Descriptions.Item>
+              )}
+              <Descriptions.Item label="Assigned To">
+                {isAdmin ? (
+                  <Select
+                    value={selected.assigneeId || undefined}
+                    placeholder="Assign technician"
+                    style={{ width: 220 }}
+                    onChange={(val) => { if (val) handleAssign(val); }}
+                  >
+                    {technicians.map(t => <Option key={t.id} value={t.id}>{t.name}</Option>)}
+                  </Select>
+                ) : (selected.assigneeName || 'Unassigned')}
+              </Descriptions.Item>
+              {selected.resolutionNotes && (
+                <Descriptions.Item label="Resolution Notes">{selected.resolutionNotes}</Descriptions.Item>
+              )}
+              {selected.rejectionReason && (
+                <Descriptions.Item label="Rejection Reason">
+                  <Text type="danger">{selected.rejectionReason}</Text>
+                </Descriptions.Item>
+              )}
+              {selected.resolvedAt && (
+                <Descriptions.Item label="Resolved At">
+                  {new Date(selected.resolvedAt).toLocaleString()}
+                </Descriptions.Item>
+              )}
+              {selected.resolutionTimeHours != null && (
+                <Descriptions.Item label="Resolution Time">
+                  {selected.resolutionTimeHours < 1
+                    ? 'Less than 1 hour'
+                    : `${selected.resolutionTimeHours} hour${selected.resolutionTimeHours !== 1 ? 's' : ''}`
+                  }
+                </Descriptions.Item>
+              )}
+              <Descriptions.Item label="Created">
+                {selected.createdAt ? new Date(selected.createdAt).toLocaleString() : '—'}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {selected.imageUrls?.length > 0 && (
+              <div>
+                <Text strong>Evidence Images</Text>
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {selected.imageUrls.map((url, i) => (
+                    <a key={i} href={url} target="_blank" rel="noreferrer">
+                      <img src={url} alt={`evidence-${i}`} className="w-24 h-24 object-cover rounded border" />
+                    </a>
+                  ))}
+                </div>
+              </div>
             )}
-          </Descriptions>
+
+            {/* Comments */}
+            <div>
+              <Text strong className="text-base">Comments</Text>
+              <List
+                className="mt-2"
+                dataSource={comments}
+                locale={{ emptyText: 'No comments yet' }}
+                renderItem={c => (
+                  <List.Item
+                    actions={[
+                      c.canEdit && editingComment !== c.id && (
+                        <Button key="edit" type="link" size="small" icon={<EditOutlined />}
+                          onClick={() => { setEditingComment(c.id); setEditText(c.content); }}>
+                          Edit
+                        </Button>
+                      ),
+                      c.canDelete && (
+                        <Popconfirm key="del" title="Delete this comment?" onConfirm={() => handleDeleteComment(c.id)}>
+                          <Button type="link" size="small" danger icon={<DeleteOutlined />}>Delete</Button>
+                        </Popconfirm>
+                      )
+                    ].filter(Boolean)}
+                  >
+                    <List.Item.Meta
+                      avatar={<Avatar icon={<UserOutlined />} />}
+                      title={
+                        <span className="font-medium">
+                          {c.userName}
+                          <Text type="secondary" className="text-xs font-normal ml-1">
+                            {new Date(c.createdAt).toLocaleString()}{c.updatedAt ? ' (edited)' : ''}
+                          </Text>
+                        </span>
+                      }
+                      description={
+                        editingComment === c.id ? (
+                          <Space.Compact style={{ width: '100%' }}>
+                            <Input value={editText} onChange={e => setEditText(e.target.value)} />
+                            <Button type="primary" onClick={() => handleEditComment(c.id)}>Save</Button>
+                            <Button onClick={() => setEditingComment(null)}>Cancel</Button>
+                          </Space.Compact>
+                        ) : c.content
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+              <Space.Compact style={{ width: '100%', marginTop: 8 }}>
+                <Input
+                  value={commentText}
+                  onChange={e => setCommentText(e.target.value)}
+                  placeholder="Add a comment..."
+                  onPressEnter={handleAddComment}
+                />
+                <Button type="primary" icon={<SendOutlined />} onClick={handleAddComment}>Send</Button>
+              </Space.Compact>
+            </div>
+          </div>
         )}
       </Drawer>
+
+      {/* Admin: Full Status Update Modal */}
+      {isAdmin && (
+        <Modal
+          title="Update Ticket Status"
+          open={statusModal}
+          onCancel={() => { setStatusModal(false); statusForm.resetFields(); }}
+          footer={null}
+        >
+          <Form form={statusForm} layout="vertical" onFinish={handleStatusUpdate}>
+            <Form.Item name="status" label="New Status" rules={[{ required: true }]}>
+              <Select>
+                {ADMIN_WORKFLOW.map(s => (
+                  <Option key={s} value={s}>
+                    <Tag color={STATUS_COLOR[s]}>{s.replace('_', ' ')}</Tag>
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item noStyle shouldUpdate={(prev, cur) => prev.status !== cur.status}>
+              {({ getFieldValue }) => getFieldValue('status') === 'REJECTED' && (
+                <Form.Item name="rejectionReason" label="Rejection Reason" rules={[{ required: true }]}>
+                  <TextArea rows={3} placeholder="Explain why this ticket is being rejected" />
+                </Form.Item>
+              )}
+            </Form.Item>
+            <Form.Item noStyle shouldUpdate={(prev, cur) => prev.status !== cur.status}>
+              {({ getFieldValue }) => ['RESOLVED', 'CLOSED'].includes(getFieldValue('status')) && (
+                <Form.Item name="resolutionNotes" label="Resolution Notes">
+                  <TextArea rows={3} placeholder="Describe how the issue was resolved" />
+                </Form.Item>
+              )}
+            </Form.Item>
+            <Form.Item>
+              <Space>
+                <Button type="primary" htmlType="submit">Update</Button>
+                <Button onClick={() => { setStatusModal(false); statusForm.resetFields(); }}>Cancel</Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Modal>
+      )}
+
+      {/* Technician: Status Update Modal */}
+      {isTechnician && (
+        <Modal
+          title="Update Ticket Status"
+          open={techModal}
+          onCancel={() => { setTechModal(false); techForm.resetFields(); }}
+          footer={null}
+        >
+          <Form form={techForm} layout="vertical" onFinish={handleTechStatusUpdate}>
+            <Form.Item name="status" label="New Status" rules={[{ required: true }]}>
+              <Select>
+                <Option value="IN_PROGRESS"><Tag color="processing">IN PROGRESS</Tag></Option>
+                <Option value="RESOLVED"><Tag color="success">RESOLVED</Tag></Option>
+              </Select>
+            </Form.Item>
+            <Form.Item noStyle shouldUpdate={(prev, cur) => prev.status !== cur.status}>
+              {({ getFieldValue }) => getFieldValue('status') === 'RESOLVED' && (
+                <Form.Item name="resolutionNotes" label="Resolution Notes" rules={[{ required: true, message: 'Please describe how the issue was resolved' }]}>
+                  <TextArea rows={3} placeholder="Describe how the issue was resolved" />
+                </Form.Item>
+              )}
+            </Form.Item>
+            <Form.Item>
+              <Space>
+                <Button type="primary" htmlType="submit">Update</Button>
+                <Button onClick={() => { setTechModal(false); techForm.resetFields(); }}>Cancel</Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Modal>
+      )}
     </div>
   );
-};
-
-export default TicketsPage;
-
+}

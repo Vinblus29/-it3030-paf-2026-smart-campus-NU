@@ -2,90 +2,74 @@ import axios from 'axios';
 
 const API_URL = '/api/tickets';
 
+const ALLOWED_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED'];
+
 const ticketService = {
-  getAllTickets: async () => {
-    const response = await axios.get(API_URL);
-    return response.data;
+  getAllTickets: () => axios.get(API_URL).then(r => r.data),
+
+  getStats: () => axios.get(`${API_URL}/stats`).then(r => r.data),
+
+  searchTickets: (params) => axios.get(`${API_URL}/search`, { params }).then(r => r.data),
+
+  getTicketById: (id) => {
+    if (!Number.isInteger(Number(id)) || Number(id) <= 0) throw new Error(`Invalid ticket id: ${id}`);
+    return axios.get(`${API_URL}/${id}`).then(r => r.data);
   },
 
-  getTicketById: async (id) => {
-    const response = await axios.get(`${API_URL}/${id}`);
-    return response.data;
+  getMyTickets: () => axios.get(`${API_URL}/my-tickets`).then(r => r.data),
+
+  getAssignedTickets: () => axios.get(`${API_URL}/assigned`).then(r => r.data),
+
+  getTicketsByStatus: (status) => {
+    if (!ALLOWED_STATUSES.includes(status)) throw new Error(`Invalid status: ${status}`);
+    return axios.get(`${API_URL}/status/${status}`).then(r => r.data);
   },
 
-  createTicket: async (ticketData) => {
-    const response = await axios.post(API_URL, ticketData);
-    return response.data;
-  },
+  getTechnicians: () => axios.get(`${API_URL}/technicians`).then(r => r.data),
 
-  updateTicket: async (id, ticketData) => {
-    const response = await axios.put(`${API_URL}/${id}`, ticketData);
-    return response.data;
-  },
-
-  deleteTicket: async (id) => {
-    const response = await axios.delete(`${API_URL}/${id}`);
-    return response.data;
-  },
-
-  assignTicket: async (ticketId, technicianId) => {
-    const response = await axios.put(`${API_URL}/${ticketId}/assign`, { technicianId });
-    return response.data;
-  },
-
-  updateTicketStatus: async (ticketId, status) => {
-    const response = await axios.put(`${API_URL}/${ticketId}/status`, { status });
-    return response.data;
-  },
-
-  updateTicketPriority: async (ticketId, priority) => {
-    const response = await axios.put(`${API_URL}/${ticketId}/priority`, { priority });
-    return response.data;
-  },
-
-  getMyTickets: async () => {
-    const response = await axios.get(`${API_URL}/my-tickets`);
-    return response.data;
-  },
-
-  getAssignedTickets: async () => {
-    const response = await axios.get(`${API_URL}/assigned`);
-    return response.data;
-  },
-
-  getTicketsByStatus: async (status) => {
-    const response = await axios.get(`${API_URL}/status/${status}`);
-    return response.data;
-  },
-
-  getTicketsByPriority: async (priority) => {
-    const response = await axios.get(`${API_URL}/priority/${priority}`);
-    return response.data;
-  },
-
-  getPendingTickets: async () => {
-    const response = await axios.get(`${API_URL}/pending`);
-    return response.data;
-  },
-
-  addComment: async (ticketId, comment) => {
-    const response = await axios.post(`${API_URL}/${ticketId}/comments`, { comment });
-    return response.data;
-  },
-
-  getComments: async (ticketId) => {
-    const response = await axios.get(`${API_URL}/${ticketId}/comments`);
-    return response.data;
-  },
-
-  uploadAttachment: async (ticketId, file) => {
+  createTicket: (ticketData, images = []) => {
     const formData = new FormData();
-    formData.append('file', file);
-    const response = await axios.post(`${API_URL}/${ticketId}/attachments`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return response.data;
-  }
+    formData.append('ticket', new Blob([JSON.stringify(ticketData)], { type: 'application/json' }));
+    images.forEach(img => formData.append('images', img));
+    return axios.post(API_URL, formData).then(r => r.data);
+  },
+
+  updateStatus: (id, payload) => {
+    if (!Number.isInteger(Number(id)) || Number(id) <= 0) throw new Error(`Invalid ticket id: ${id}`);
+    return axios.put(`${API_URL}/${id}/status`, payload).then(r => r.data);
+  },
+
+  assignTicket: (id, assigneeId) => {
+    if (!Number.isInteger(Number(id)) || Number(id) <= 0) throw new Error(`Invalid ticket id: ${id}`);
+    return axios.put(`${API_URL}/${id}/assign`, { assigneeId }).then(r => r.data);
+  },
+
+  deleteTicket: (id) => {
+    if (!Number.isInteger(Number(id)) || Number(id) <= 0) throw new Error(`Invalid ticket id: ${id}`);
+    return axios.delete(`${API_URL}/${id}`);
+  },
+
+  getComments: (ticketId) => {
+    if (!Number.isInteger(Number(ticketId)) || Number(ticketId) <= 0) throw new Error(`Invalid ticket id: ${ticketId}`);
+    return axios.get(`${API_URL}/${ticketId}/comments`).then(r => r.data);
+  },
+
+  addComment: (ticketId, content) => {
+    if (!Number.isInteger(Number(ticketId)) || Number(ticketId) <= 0) throw new Error(`Invalid ticket id: ${ticketId}`);
+    return axios.post(`${API_URL}/${ticketId}/comments`, { content }).then(r => r.data);
+  },
+
+  editComment: (ticketId, commentId, content) => {
+    if (!Number.isInteger(Number(ticketId)) || Number(ticketId) <= 0) throw new Error(`Invalid ticket id: ${ticketId}`);
+    if (!Number.isInteger(Number(commentId)) || Number(commentId) <= 0) throw new Error(`Invalid comment id: ${commentId}`);
+    return axios.put(`${API_URL}/${ticketId}/comments/${commentId}`, { content }).then(r => r.data);
+  },
+
+  deleteComment: (ticketId, commentId) => {
+    if (!Number.isInteger(Number(ticketId)) || Number(ticketId) <= 0) throw new Error(`Invalid ticket id: ${ticketId}`);
+    if (!Number.isInteger(Number(commentId)) || Number(commentId) <= 0) throw new Error(`Invalid comment id: ${commentId}`);
+    return axios.delete(`${API_URL}/${ticketId}/comments/${commentId}`);
+  },
 };
 
 export default ticketService;
