@@ -62,5 +62,26 @@ public class FacilityController {
         facilityService.deleteFacility(id);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/{id}/availability")
+    public ResponseEntity<java.util.Map<String, Object>> getAvailability(
+            @PathVariable Long id,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date) {
+        if (date == null) date = java.time.LocalDate.now();
+        return ResponseEntity.ok(facilityService.getAvailabilityStatus(id, date));
+    }
+
+    @GetMapping("/{id}/qr")
+    public ResponseEntity<byte[]> getQRCode(@PathVariable Long id) throws Exception {
+        byte[] qrCode = facilityService.generateQRCode(id);
+        return ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.IMAGE_PNG)
+                .body(qrCode);
+    }
+
+    @GetMapping("/tags")
+    public ResponseEntity<List<FacilityDTO>> searchByTags(@RequestParam java.util.Set<String> tags) {
+        return ResponseEntity.ok(facilityService.searchFacilitiesByTags(tags));
+    }
 }
 

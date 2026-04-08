@@ -99,10 +99,17 @@ const FacilityModal = ({ visible, facility, onCancel, onSuccess }) => {
         </Form.Item>
 
         <Form.Item
-          name="equipment"
-          label="Equipment (Optional)"
+          name="tags"
+          label="Amenities (Tags)"
         >
-          <Input placeholder="E.g., Projector, Whiteboard (Comma separated)" />
+          <Select mode="tags" placeholder="Add amenities: e.g. AC, Projector, WiFi" style={{ width: '100%' }}>
+            <Option value="Projector">Projector</Option>
+            <Option value="AC">AC</Option>
+            <Option value="Whiteboard">Whiteboard</Option>
+            <Option value="WiFi">WiFi</Option>
+            <Option value="Video-Conf">Video-Conf</Option>
+            <Option value="Smart-Board">Smart-Board</Option>
+          </Select>
         </Form.Item>
 
         <Form.Item

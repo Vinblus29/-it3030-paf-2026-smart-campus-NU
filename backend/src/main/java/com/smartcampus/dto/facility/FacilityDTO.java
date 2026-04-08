@@ -14,6 +14,9 @@ public class FacilityDTO {
     private boolean available;
     private String equipment;
     private String availabilityWindows;
+    private java.util.Set<String> tags;
+    private String healthScore; // EXCELLENT, GOOD, NEEDS_ATTENTION, CRITICAL
+    private Double utilizationPercentage;
     private LocalDateTime createdAt;
 
     // Constructors
@@ -99,6 +102,30 @@ public class FacilityDTO {
 
     public void setAvailabilityWindows(String availabilityWindows) {
         this.availabilityWindows = availabilityWindows;
+    }
+
+    public java.util.Set<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(java.util.Set<String> tags) {
+        this.tags = tags;
+    }
+
+    public String getHealthScore() {
+        return healthScore;
+    }
+
+    public void setHealthScore(String healthScore) {
+        this.healthScore = healthScore;
+    }
+
+    public Double getUtilizationPercentage() {
+        return utilizationPercentage;
+    }
+
+    public void setUtilizationPercentage(Double utilizationPercentage) {
+        this.utilizationPercentage = utilizationPercentage;
     }
 
     public LocalDateTime getCreatedAt() {
