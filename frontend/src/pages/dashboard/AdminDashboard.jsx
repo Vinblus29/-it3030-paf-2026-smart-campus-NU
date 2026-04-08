@@ -326,6 +326,7 @@ const AdminDashboard = () => {
             { icon: <ToolOutlined />, label: 'Manage Tickets', href: '/tickets', accent: '#e94560' },
             { icon: <ApartmentOutlined />, label: 'Manage Facilities', href: '/facilities', accent: '#52c41a' },
             { icon: <SendOutlined />, label: 'Campus Chat', href: '/chat', accent: '#0f3460' },
+            { icon: <CheckCircleOutlined />, label: 'QR Check-in', href: '/bookings/qr-check-in', accent: '#a569bd' },
           ].map(({ icon, label, href, accent }) => (
             <a key={href} href={href} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',

@@ -189,6 +189,32 @@ public class BookingService {
     }
 
     @Transactional
+    public BookingDTO checkIn(Long id) {
+        Booking booking = bookingRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (!"APPROVED".equals(booking.getStatus())) {
+            throw new RuntimeException("Only approved bookings can be checked in");
+        }
+
+        if (booking.getCheckedIn() != null && booking.getCheckedIn()) {
+            throw new RuntimeException("Booking already checked in");
+        }
+
+        booking.setCheckedIn(true);
+        booking.setCheckInTime(LocalDateTime.now());
+        booking.setUpdatedAt(LocalDateTime.now());
+
+        booking = bookingRepository.save(booking);
+
+        // Send notification
+        createNotification(booking.getUser(), "Checked In Successfully", 
+            "You have successfully checked in for your booking at " + booking.getFacility().getName(), "BOOKING");
+
+        return mapToDTO(booking);
+    }
+
+    @Transactional
     public void deleteBooking(Long id) {
         bookingRepository.deleteById(id);
     }
@@ -217,6 +243,8 @@ public class BookingService {
         dto.setAttachmentUrl(booking.getAttachmentUrl());
         dto.setNumberOfPeople(booking.getNumberOfPeople());
         dto.setCreatedAt(booking.getCreatedAt());
+        dto.setCheckedIn(booking.getCheckedIn());
+        dto.setCheckInTime(booking.getCheckInTime());
         return dto;
     }
 }

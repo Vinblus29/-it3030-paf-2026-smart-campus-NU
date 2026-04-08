@@ -20,6 +20,7 @@ import TechnicianDashboard from './pages/dashboard/TechnicianDashboard';
 import FacilitiesPage from './pages/facilities/FacilitiesPage';
 import BookingsPage from './pages/bookings/BookingsPage';
 import MyBookingsPage from './pages/bookings/MyBookingsPage';
+import QRCheckInPage from './pages/bookings/QRCheckInPage';
 import TicketsPage from './pages/tickets/TicketsPage';
 import MyTicketsPage from './pages/tickets/MyTicketsPage';
 import NotificationsPage from './pages/notifications/NotificationsPage';
@@ -61,6 +62,11 @@ function App() {
             <Route path="/bookings" element={
               <ProtectedRoute roles={['ADMIN']}>
                 <BookingsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/bookings/qr-check-in" element={
+              <ProtectedRoute roles={['ADMIN', 'TECHNICIAN']}>
+                <QRCheckInPage />
               </ProtectedRoute>
             } />
             <Route path="/tickets" element={

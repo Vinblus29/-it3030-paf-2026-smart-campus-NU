@@ -68,7 +68,17 @@ const bookingService = {
   getUpcomingBookings: async () => { 
     const response = await axios.get(`${API_URL}/upcoming`); 
     return response.data; 
-  } 
+  },
+
+  getBookingQR: async (id) => {
+    const response = await axios.get(`${API_URL}/${id}/qr`);
+    return response.data;
+  },
+
+  checkInBooking: async (id) => {
+    const response = await axios.put(`${API_URL}/${id}/check-in`);
+    return response.data;
+  }
 }; 
 
 export default bookingService; 
