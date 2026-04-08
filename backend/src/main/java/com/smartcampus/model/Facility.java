@@ -30,6 +30,8 @@ public class Facility {
 
     private String equipment; // JSON string for equipment list
 
+    private String availabilityWindows;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
@@ -117,6 +119,14 @@ public class Facility {
 
     public void setEquipment(String equipment) {
         this.equipment = equipment;
+    }
+
+    public String getAvailabilityWindows() {
+        return availabilityWindows;
+    }
+
+    public void setAvailabilityWindows(String availabilityWindows) {
+        this.availabilityWindows = availabilityWindows;
     }
 
     public LocalDateTime getCreatedAt() {

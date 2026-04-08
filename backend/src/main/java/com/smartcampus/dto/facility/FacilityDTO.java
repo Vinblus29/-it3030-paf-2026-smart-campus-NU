@@ -13,6 +13,7 @@ public class FacilityDTO {
     private String imageUrl;
     private boolean available;
     private String equipment;
+    private String availabilityWindows;
     private LocalDateTime createdAt;
 
     // Constructors
@@ -90,6 +91,14 @@ public class FacilityDTO {
 
     public void setEquipment(String equipment) {
         this.equipment = equipment;
+    }
+
+    public String getAvailabilityWindows() {
+        return availabilityWindows;
+    }
+
+    public void setAvailabilityWindows(String availabilityWindows) {
+        this.availabilityWindows = availabilityWindows;
     }
 
     public LocalDateTime getCreatedAt() {

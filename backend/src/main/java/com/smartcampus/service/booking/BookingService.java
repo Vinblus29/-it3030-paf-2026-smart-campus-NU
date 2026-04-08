@@ -116,7 +116,24 @@ public class BookingService {
         Booking booking = bookingRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Booking not found"));
 
+        if (!"PENDING".equals(booking.getStatus())) {
+            throw new RuntimeException("Only pending bookings can be approved");
+        }
+
+        // Check for conflicts with APPROVED bookings again to be sure
+        List<Booking> conflicts = bookingRepository.findConflictingBookings(
+            booking.getFacility().getId(),
+            booking.getStartTime(),
+            booking.getEndTime()
+        );
+
+        if (!conflicts.isEmpty()) {
+            throw new RuntimeException("Cannot approve: This time slot is already booked by another approved request.");
+        }
+
+        User currentUser = authService.getCurrentUser();
         booking.setStatus("APPROVED");
+        booking.setApprovedBy(currentUser.getFirstName() + " " + currentUser.getLastName());
         booking.setApprovedAt(LocalDateTime.now());
         booking.setUpdatedAt(LocalDateTime.now());
 
@@ -133,6 +150,10 @@ public class BookingService {
     public BookingDTO rejectBooking(Long id, String reason) {
         Booking booking = bookingRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (!"PENDING".equals(booking.getStatus())) {
+            throw new RuntimeException("Can only reject pending bookings");
+        }
 
         booking.setStatus("REJECTED");
         booking.setRejectionReason(reason);
