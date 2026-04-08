@@ -32,9 +32,14 @@ public class Facility {
 
     private String availabilityWindows;
 
-    private LocalDateTime createdAt;
+    @ElementCollection
+    @CollectionTable(name = "facility_tags", joinColumns = @JoinColumn(name = "facility_id"))
+    @Column(name = "tag")
+    private java.util.Set<String> tags = new java.util.HashSet<>();
 
-    private LocalDateTime updatedAt;
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    private LocalDateTime updatedAt = LocalDateTime.now();
 
     // Constructors
     public Facility() {
@@ -46,6 +51,7 @@ public class Facility {
         this.location = location;
         this.capacity = capacity;
         this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
 
     // Getters and Setters
@@ -127,6 +133,14 @@ public class Facility {
 
     public void setAvailabilityWindows(String availabilityWindows) {
         this.availabilityWindows = availabilityWindows;
+    }
+
+    public java.util.Set<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(java.util.Set<String> tags) {
+        this.tags = tags;
     }
 
     public LocalDateTime getCreatedAt() {

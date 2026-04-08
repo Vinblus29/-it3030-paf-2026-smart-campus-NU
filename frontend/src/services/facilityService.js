@@ -54,6 +54,24 @@ const facilityService = {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     return response.data;
+  },
+
+  getFacilityAvailability: async (id, date) => {
+    const response = await axios.get(`${API_URL}/${id}/availability`, {
+      params: { date }
+    });
+    return response.data;
+  },
+
+  getFacilityQRCodeUrl: (id) => {
+    return `${API_URL}/${id}/qr`;
+  },
+
+  getFacilitiesByTags: async (tags) => {
+    const response = await axios.get(`${API_URL}/tags`, {
+      params: { tags: tags.join(',') }
+    });
+    return response.data;
   }
 };
 
