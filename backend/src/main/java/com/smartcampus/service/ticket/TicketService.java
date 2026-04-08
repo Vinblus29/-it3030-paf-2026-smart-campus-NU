@@ -13,12 +13,18 @@ import java.util.stream.Collectors;
 public class TicketService {
 
     private final TicketRepository repository;
+    private final com.smartcampus.service.auth.AuthService authService;
 
-    public TicketService(TicketRepository repository) {
+    public TicketService(TicketRepository repository, com.smartcampus.service.auth.AuthService authService) {
         this.repository = repository;
+        this.authService = authService;
     }
 
     public TicketResponse createTicket(TicketRequest request) {
+        com.smartcampus.model.User currentUser = authService.getCurrentUser();
+        if (!currentUser.isEnabled()) {
+            throw new RuntimeException("Account is pending approval. You cannot raise tickets yet.");
+        }
 
         Ticket ticket = new Ticket();
         ticket.setTitle(request.getTitle());
@@ -51,6 +57,22 @@ public class TicketService {
         return toResponse(repository.save(ticket));
     }
 
+
+    public List<TicketResponse> getMyTickets() {
+        String userEmail = authService.getCurrentUser().getEmail();
+        return repository.findByReportedBy(userEmail)
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<TicketResponse> getAssignedTickets() {
+        String userEmail = authService.getCurrentUser().getEmail();
+        return repository.findByAssignedTo(userEmail)
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
 
     public void deleteTicket(Long id) {
         repository.deleteById(id);

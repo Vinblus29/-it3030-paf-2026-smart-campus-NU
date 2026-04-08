@@ -86,7 +86,8 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                 user.getPhoneNumber(),
                 user.getRole(),
                 user.isEnabled(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                user.getProfileImageUrl()
             );
 
             // Redirect with token

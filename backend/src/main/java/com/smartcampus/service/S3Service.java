@@ -28,18 +28,25 @@ public class S3Service {
     public String uploadFile(MultipartFile file) {
         String fileName = generateFileName(file.getOriginalFilename());
         
+        // FORCING HARDCODED VALUES AS PER USER REQUEST
+        String effectiveBucket = "smart-campus-files-2026";
+        String effectiveRegion = "eu-north-1";
+        
+        System.out.println("Uploading to S3 Bucket: " + effectiveBucket + " in Region: " + effectiveRegion);
         try {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                    .bucket(bucketName)
+                    .bucket(effectiveBucket)
                     .key(fileName)
                     .contentType(file.getContentType())
                     .build();
 
             s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
-            
+            System.out.println("S3 Upload Successful: " + fileName);
             return getFileUrl(fileName);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to upload file", e);
+        } catch (Exception e) {
+            System.err.println("CRITICAL S3 ERROR: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("S3 Failed: " + e.getMessage(), e);
         }
     }
 
@@ -107,7 +114,9 @@ public class S3Service {
     }
 
     private String getFileUrl(String fileName) {
-        return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, fileName);
+        String effectiveBucket = "smart-campus-files-2026";
+        String effectiveRegion = "eu-north-1";
+        return String.format("https://%s.s3.%s.amazonaws.com/%s", effectiveBucket, effectiveRegion, fileName);
     }
 }
 

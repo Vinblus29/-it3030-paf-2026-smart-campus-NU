@@ -27,7 +27,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),
-                user.isEnabled(),
+                true, // Enabled to allow login for pending users (we check status in UI/Services)
                 true,
                 true,
                 true,

@@ -3,7 +3,9 @@ package com.smartcampus.dto.auth;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class RegisterRequest {
     
     @NotBlank(message = "Email is required")
@@ -23,6 +25,8 @@ public class RegisterRequest {
     private String phoneNumber;
 
     private String role; // USER, ADMIN, TECHNICIAN
+
+    private String profileImageUrl;
 
     // Getters and Setters
     public String getEmail() {
@@ -71,6 +75,14 @@ public class RegisterRequest {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 }
 
