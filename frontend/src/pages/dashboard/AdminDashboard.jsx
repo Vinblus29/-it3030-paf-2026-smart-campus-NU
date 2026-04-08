@@ -81,7 +81,7 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [facilities, bookings, ticketStatsData, userStats] = await Promise.all([
+      const [facilitiesRes, bookingsRes, ticketStatsData, userStats] = await Promise.all([
         facilityService.getAllFacilities(),
         bookingService.getAllBookings(),
         ticketService.getStats(),       // #1 — use stats endpoint
@@ -89,7 +89,6 @@ const AdminDashboard = () => {
       ]);
       const facilities = Array.isArray(facilitiesRes) ? facilitiesRes : (facilitiesRes?.content ?? []);
       const bookings = Array.isArray(bookingsRes) ? bookingsRes : (bookingsRes?.content ?? []);
-      const tickets = Array.isArray(ticketsRes) ? ticketsRes : (ticketsRes?.content ?? []);
 
       const pendingBookings = bookings.filter(b => b.status === 'PENDING');
 

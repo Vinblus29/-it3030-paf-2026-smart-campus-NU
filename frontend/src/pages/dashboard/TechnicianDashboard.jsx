@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Typography, Button, Table, Tag, Badge } from 'antd';
+import { Card, Row, Col, Statistic, Typography, Button, Table, Tag, Badge, Spin } from 'antd';
 import {
   ToolOutlined,
   CheckCircleOutlined,
@@ -53,6 +53,7 @@ const StatCard = ({ icon, label, value, sub, accent }) => (
 );
 
 const TechnicianDashboard = () => {
+  const { Title, Text } = Typography;
   const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
@@ -132,7 +133,7 @@ const TechnicianDashboard = () => {
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}><Spin size="large" /></div>;
 
-  const urgent = tickets.filter(t => t.status === 'OPEN' && t.priority === 'HIGH');
+  const urgent = recentTickets.filter(t => t.status === 'OPEN' && t.priority === 'HIGH');
 
   return (
     <div className="space-y-6">
@@ -229,7 +230,7 @@ const TechnicianDashboard = () => {
           pagination={false}
           size="small"
         />
-      </div>
+      </Card>
     </div>
   );
 };
