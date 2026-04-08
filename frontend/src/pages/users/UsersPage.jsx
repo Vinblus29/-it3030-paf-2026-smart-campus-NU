@@ -131,9 +131,13 @@ const UsersPage = () => {
       key: 'user',
       render: (_, record) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
-            {record.firstName?.charAt(0)}{record.lastName?.charAt(0)}
-          </div>
+          {record.profileImageUrl ? (
+            <img src={record.profileImageUrl} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+              {record.firstName?.charAt(0)}{record.lastName?.charAt(0)}
+            </div>
+          )}
           <div>
             <div className="font-medium">{record.firstName} {record.lastName}</div>
             <div className="text-gray-400 text-sm">{record.email}</div>
@@ -174,17 +178,17 @@ const UsersPage = () => {
       render: (_, record) => (
         <Space>
           {record.enabled ? (
-            <Button 
-              size="small" 
-              danger 
+            <Button
+              size="small"
+              danger
               icon={<CloseOutlined />}
               onClick={() => handleDisable(record.id)}
             >
               Disable
             </Button>
           ) : (
-            <Button 
-              size="small" 
+            <Button
+              size="small"
               type="primary"
               icon={<CheckOutlined />}
               onClick={() => handleEnable(record.id)}
@@ -192,9 +196,9 @@ const UsersPage = () => {
               Enable
             </Button>
           )}
-          <Button 
-            size="small" 
-            danger 
+          <Button
+            size="small"
+            danger
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(record.id)}
           >
@@ -211,9 +215,13 @@ const UsersPage = () => {
       key: 'user',
       render: (_, record) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-semibold">
-            {record.firstName?.charAt(0)}{record.lastName?.charAt(0)}
-          </div>
+          {record.profileImageUrl ? (
+            <img src={record.profileImageUrl} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-semibold">
+              {record.firstName?.charAt(0)}{record.lastName?.charAt(0)}
+            </div>
+          )}
           <div>
             <div className="font-medium">{record.firstName} {record.lastName}</div>
             <div className="text-gray-400 text-sm">{record.email}</div>
@@ -243,7 +251,7 @@ const UsersPage = () => {
       key: 'actions',
       render: (_, record) => (
         <Space>
-          <Button 
+          <Button
             type="primary"
             icon={<CheckOutlined />}
             onClick={() => handleApprove(record.id)}
@@ -251,7 +259,7 @@ const UsersPage = () => {
           >
             Approve
           </Button>
-          <Button 
+          <Button
             danger
             icon={<CloseOutlined />}
             onClick={() => handleReject(record.id)}
@@ -272,10 +280,10 @@ const UsersPage = () => {
         </span>
       ),
       children: (
-        <Table 
-          columns={columns} 
-          dataSource={users} 
-          rowKey="id" 
+        <Table
+          columns={columns}
+          dataSource={users}
+          rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10 }}
         />
@@ -285,16 +293,16 @@ const UsersPage = () => {
       key: 'pending',
       label: (
         <span>
-          Pending Approval 
+          Pending Approval
           {pendingUsers.length > 0 && <Badge count={pendingUsers.length} offset={[10, 0]} />}
         </span>
       ),
       children: (
         pendingUsers.length > 0 ? (
-          <Table 
-            columns={pendingColumns} 
-            dataSource={pendingUsers} 
-            rowKey="id" 
+          <Table
+            columns={pendingColumns}
+            dataSource={pendingUsers}
+            rowKey="id"
             pagination={{ pageSize: 10 }}
           />
         ) : (
@@ -315,16 +323,16 @@ const UsersPage = () => {
             <h1 className="text-2xl font-bold text-gray-800">User Management</h1>
             <p className="text-gray-500">Manage user accounts and approvals</p>
           </div>
-          <Button 
-            icon={<ReloadOutlined />} 
+          <Button
+            icon={<ReloadOutlined />}
             onClick={() => { fetchUsers(); fetchPendingUsers(); }}
           >
             Refresh
           </Button>
         </div>
 
-        <Tabs 
-          activeKey={activeTab} 
+        <Tabs
+          activeKey={activeTab}
           onChange={setActiveTab}
           items={items}
         />

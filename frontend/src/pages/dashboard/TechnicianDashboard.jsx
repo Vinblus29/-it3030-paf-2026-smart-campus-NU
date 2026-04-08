@@ -11,7 +11,46 @@ import { useAuth } from '../../context/AuthContext';
 import ticketService from '../../services/ticketService';
 import { useNavigate } from 'react-router-dom';
 
-const { Title, Text } = Typography;
+const STATUS_COLORS = {
+  OPEN: { bg: '#e6f4ff', text: '#096dd9', border: '#91caff' },
+  IN_PROGRESS: { bg: '#fff7e6', text: '#d46b08', border: '#ffd591' },
+  RESOLVED: { bg: '#f6ffed', text: '#389e0d', border: '#b7eb8f' },
+  CLOSED: { bg: '#f5f5f5', text: '#595959', border: '#d9d9d9' },
+  PENDING: { bg: '#fff7e6', text: '#d46b08', border: '#ffd591' },
+};
+
+const StatusBadge = ({ status }) => {
+  const c = STATUS_COLORS[status] || STATUS_COLORS.CLOSED;
+  return (
+    <span style={{
+      padding: '2px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+      background: c.bg, color: c.text, border: `1px solid ${c.border}`, letterSpacing: 0.3, whiteSpace: 'nowrap'
+    }}>
+      {status?.replace('_', ' ')}
+    </span>
+  );
+};
+
+const StatCard = ({ icon, label, value, sub, accent }) => (
+  <div style={{
+    background: '#fff', borderRadius: 6, padding: '20px 22px',
+    borderLeft: `4px solid ${accent}`, boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+    display: 'flex', alignItems: 'center', gap: 18, flex: 1, minWidth: 0
+  }}>
+    <div style={{
+      width: 48, height: 48, borderRadius: 8, background: accent + '18',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 22, color: accent, flexShrink: 0
+    }}>
+      {icon}
+    </div>
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: 26, fontWeight: 700, color: '#1a1a2e', lineHeight: 1.1 }}>{value}</div>
+      <div style={{ fontSize: 13, color: '#555', fontWeight: 600, marginTop: 2 }}>{label}</div>
+      {sub && <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>{sub}</div>}
+    </div>
+  </div>
+);
 
 const TechnicianDashboard = () => {
   const { user } = useAuth();
@@ -74,6 +113,7 @@ const TechnicianDashboard = () => {
         </div>
       )
     },
+    { title: 'Status', dataIndex: 'status', key: 'status', render: s => <StatusBadge status={s} /> },
     {
       title: 'Priority', dataIndex: 'priority', key: 'priority',
       render: p => <Tag color={PRIORITY_COLOR[p]}>{p}</Tag>,
@@ -89,6 +129,10 @@ const TechnicianDashboard = () => {
       render: d => d ? new Date(d).toLocaleDateString() : '-'
     },
   ];
+
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}><Spin size="large" /></div>;
+
+  const urgent = tickets.filter(t => t.status === 'OPEN' && t.priority === 'HIGH');
 
   return (
     <div className="space-y-6">
@@ -185,7 +229,7 @@ const TechnicianDashboard = () => {
           pagination={false}
           size="small"
         />
-      </Card>
+      </div>
     </div>
   );
 };

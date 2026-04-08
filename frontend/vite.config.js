@@ -5,9 +5,12 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  
+
   return {
     plugins: [react(), tailwindcss()],
+    define: {
+      global: 'window',
+    },
     server: {
       port: 5173,
       proxy: {

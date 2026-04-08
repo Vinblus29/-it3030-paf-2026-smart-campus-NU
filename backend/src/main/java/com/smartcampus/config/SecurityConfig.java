@@ -2,6 +2,7 @@ package com.smartcampus.config;
 
 import com.smartcampus.security.CustomUserDetailsService;
 import com.smartcampus.security.JwtAuthenticationFilter;
+import com.smartcampus.security.OAuth2AuthenticationSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -31,11 +32,14 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService customUserDetailsService;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
-                         CustomUserDetailsService customUserDetailsService) {
+                          CustomUserDetailsService customUserDetailsService,
+                          OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.customUserDetailsService = customUserDetailsService;
+        this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
     }
 
     @Bean
@@ -46,12 +50,27 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
+                .requestMatchers("/oauth2/**").permitAll()
+                .requestMatchers("/login/oauth2/**").permitAll()
+                .requestMatchers("/login").permitAll()
+                .requestMatchers("/error").permitAll()
+                .requestMatchers("/swagger-ui/**").permitAll()
+                .requestMatchers("/swagger-ui.html").permitAll()
+                .requestMatchers("/v3/api-docs/**").permitAll()
+                .requestMatchers("/webjars/**").permitAll()
+                .requestMatchers("/swagger-resources/**").permitAll()
+                .requestMatchers("/ws-chat/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/technician/**").hasAnyRole("ADMIN", "TECHNICIAN")
+                .requestMatchers("/api/technician/**").hasRole("TECHNICIAN")
+                .requestMatchers("/api/chat/**").authenticated()
+                .requestMatchers("/api/users/**").authenticated()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            .oauth2Login(oauth2 -> oauth2
+                .successHandler(oAuth2AuthenticationSuccessHandler)
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -90,4 +109,3 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
-

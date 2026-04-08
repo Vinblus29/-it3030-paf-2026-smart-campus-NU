@@ -14,12 +14,18 @@ import java.time.LocalDateTime;
 public class DataInitializer {
 
     @Bean
-    CommandLineRunner initDatabase(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    CommandLineRunner initDatabase(UserRepository userRepository, 
+                                   com.smartcampus.repository.ChatGroupRepository groupRepository,
+                                   com.smartcampus.repository.FacilityRepository facilityRepository,
+                                   com.smartcampus.repository.BlackoutPeriodRepository blackoutPeriodRepository,
+                                   com.smartcampus.repository.MaintenanceTicketRepository maintenanceTicketRepository,
+                                   PasswordEncoder passwordEncoder) {
         return args -> {
             // Only seed if database is empty
             if (userRepository.count() == 0) {
                 
                 // Create ADMIN user
+// ... (omitted parts for brevity in matching, but I'll replace the whole block)
                 User admin = new User();
                 admin.setEmail("admin@smartuni.com");
                 admin.setPassword(passwordEncoder.encode("admin123"));
@@ -54,16 +60,43 @@ public class DataInitializer {
                 user.setEnabled(true);
                 user.setCreatedAt(LocalDateTime.now());
                 userRepository.save(user);
+
+                // Create Broadcast Groups
+                if (groupRepository.count() == 0) {
+                    groupRepository.save(new com.smartcampus.model.ChatGroup("Year 1 Announcements", "Official broadcasts for Year 1 students", true));
+                    groupRepository.save(new com.smartcampus.model.ChatGroup("Year 2 Announcements", "Official broadcasts for Year 2 students", true));
+                    groupRepository.save(new com.smartcampus.model.ChatGroup("Year 3 Announcements", "Official broadcasts for Year 3 students", true));
+                    groupRepository.save(new com.smartcampus.model.ChatGroup("Year 4 Announcements", "Official broadcasts for Year 4 students", true));
+                }
+
+                // Create Facilities
+                if (facilityRepository.count() == 0) {
+                    com.smartcampus.model.Facility f1 = new com.smartcampus.model.Facility("Main Auditorium", "LECTURE_HALL", "Building A, Floor 1", 500);
+                    f1.setTags(new java.util.HashSet<>(java.util.Arrays.asList("Projector", "AC", "WiFi", "Video-Conf")));
+                    f1 = facilityRepository.save(f1);
+
+                    com.smartcampus.model.Facility f2 = new com.smartcampus.model.Facility("Advanced Computing Lab", "LAB", "Building C, Floor 2", 30);
+                    f2.setTags(new java.util.HashSet<>(java.util.Arrays.asList("WiFi", "Smart-Board", "AC")));
+                    f2 = facilityRepository.save(f2);
+                    
+                    // Add a maintenance ticket for the lab to show health score
+                    maintenanceTicketRepository.save(new com.smartcampus.model.MaintenanceTicket(f2, "PC 05 not starting", "MEDIUM"));
+                    
+                    // Add a blackout period for auditorium
+                    blackoutPeriodRepository.save(new com.smartcampus.model.BlackoutPeriod(f1, 
+                        LocalDateTime.now().plusDays(1).withHour(8).withMinute(0),
+                        LocalDateTime.now().plusDays(1).withHour(18).withMinute(0),
+                        "Annual Convocation Rehearsal"));
+                }
                 
                 System.out.println("========================================");
-                System.out.println("Database seeded with test users:");
+                System.out.println("Database seeded with test users & groups:");
                 System.out.println("----------------------------------------");
-                System.out.println("ADMIN    | Email: admin@smartuni.com    | Password: admin123");
-                System.out.println("TECHNICIAN | Email: technician@smartuni.com | Password: tech123");
-                System.out.println("USER     | Email: user@smartuni.com     | Password: user123");
+                System.out.println("ADMIN      | Email: admin@smartuni.com");
+                System.out.println("TECHNICIAN | Email: technician@smartuni.com");
+                System.out.println("USER       | Email: user@smartuni.com");
+                System.out.println("Groups     | Year 1 - Year 4 Announcements created");
                 System.out.println("========================================");
-            } else {
-                System.out.println("Database already contains users, skipping seeding.");
             }
         };
     }

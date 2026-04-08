@@ -43,6 +43,12 @@ public class Booking {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+    
+    @Column(nullable = true)
+    private Boolean checkedIn = false;
+    
+    @Column(nullable = true)
+    private LocalDateTime checkInTime;
 
     // Constructors
     public Booking() {
@@ -169,6 +175,22 @@ public class Booking {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Boolean getCheckedIn() {
+        return checkedIn;
+    }
+
+    public void setCheckedIn(Boolean checkedIn) {
+        this.checkedIn = checkedIn;
+    }
+
+    public LocalDateTime getCheckInTime() {
+        return checkInTime;
+    }
+
+    public void setCheckInTime(LocalDateTime checkInTime) {
+        this.checkInTime = checkInTime;
     }
 }
 

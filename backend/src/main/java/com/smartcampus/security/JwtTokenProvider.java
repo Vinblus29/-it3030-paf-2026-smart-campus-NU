@@ -22,6 +22,9 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
+    @Value("${jwt.rememberMe.expiration:604800000}")
+    private long jwtRememberMeExpiration;
+
     private SecretKey getSigningKey() {
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
@@ -29,20 +32,26 @@ public class JwtTokenProvider {
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, userDetails.getUsername());
+        return createToken(claims, userDetails.getUsername(), jwtExpiration);
     }
 
     public String generateToken(String username) {
         Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, username);
+        return createToken(claims, username, jwtExpiration);
     }
 
-    private String createToken(Map<String, Object> claims, String subject) {
+    public String generateToken(String username, boolean rememberMe) {
+        Map<String, Object> claims = new HashMap<>();
+        long expiration = rememberMe ? jwtRememberMeExpiration : jwtExpiration;
+        return createToken(claims, username, expiration);
+    }
+
+    private String createToken(Map<String, Object> claims, String subject, long expiration) {
         return Jwts.builder()
                 .claims(claims)
                 .subject(subject)
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey())
                 .compact();
     }

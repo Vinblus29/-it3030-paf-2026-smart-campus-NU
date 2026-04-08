@@ -13,13 +13,14 @@ public class UserResponse {
     private Role role;
     private boolean enabled;
     private LocalDateTime createdAt;
+    private String profileImageUrl;
 
     // Constructors
     public UserResponse() {
     }
 
     public UserResponse(Long id, String email, String firstName, String lastName, 
-                        String phoneNumber, Role role, boolean enabled, LocalDateTime createdAt) {
+                        String phoneNumber, Role role, boolean enabled, LocalDateTime createdAt, String profileImageUrl) {
         this.id = id;
         this.email = email;
         this.firstName = firstName;
@@ -28,6 +29,7 @@ public class UserResponse {
         this.role = role;
         this.enabled = enabled;
         this.createdAt = createdAt;
+        this.profileImageUrl = profileImageUrl;
     }
 
     // Getters and Setters
@@ -93,6 +95,14 @@ public class UserResponse {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 }
 
