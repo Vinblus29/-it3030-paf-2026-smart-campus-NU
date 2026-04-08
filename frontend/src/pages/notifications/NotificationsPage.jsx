@@ -32,6 +32,10 @@ const NotificationsPage = () => {
         return <WarningOutlined className="text-orange-500" />;
       case 'ERROR':
         return <InfoCircleOutlined className="text-red-500" />;
+      case 'CHAT':
+        return <CheckCircleOutlined className="text-blue-500" />;
+      case 'BROADCAST':
+        return <WarningOutlined className="text-purple-500" />;
       default:
         return <BellOutlined className="text-blue-500" />;
     }
@@ -45,6 +49,10 @@ const NotificationsPage = () => {
         return 'orange';
       case 'ERROR':
         return 'red';
+      case 'CHAT':
+        return 'blue';
+      case 'BROADCAST':
+        return 'purple';
       default:
         return 'blue';
     }
@@ -56,7 +64,7 @@ const NotificationsPage = () => {
     const now = new Date();
     const diff = now - notificationDate;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
+
     if (days === 0) {
       return notificationDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     } else if (days === 1) {
@@ -122,8 +130,8 @@ const NotificationsPage = () => {
             )}
           />
         ) : (
-          <Empty 
-            description="No notifications yet" 
+          <Empty
+            description="No notifications yet"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           >
             <Button type="primary" href="/dashboard">

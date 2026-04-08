@@ -135,8 +135,8 @@ public class AdminService {
             user.getPhoneNumber(),
             user.getRole(),
             user.isEnabled(),
-            user.getCreatedAt()
+            user.getCreatedAt(),
+            user.getProfileImageUrl()
         );
     }
 }
-

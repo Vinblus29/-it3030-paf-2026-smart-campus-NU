@@ -15,6 +15,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     
     @Query("SELECT COUNT(n) FROM Notification n WHERE n.user.id = :userId AND n.read = false")
     long countUnreadByUserId(@Param("userId") Long userId);
+
+    long countByUserAndReadFalse(com.smartcampus.model.User user);
     
     List<Notification> findByUserIdAndReadFalseOrderByCreatedAtDesc(Long userId);
 }

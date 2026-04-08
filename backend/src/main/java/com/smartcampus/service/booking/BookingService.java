@@ -74,6 +74,10 @@ public class BookingService {
     public BookingDTO createBooking(BookingRequest request) {
         User currentUser = authService.getCurrentUser();
         
+        if (!currentUser.isEnabled()) {
+            throw new RuntimeException("Your account is pending approval. You cannot create bookings yet.");
+        }
+        
         Facility facility = facilityRepository.findById(request.getFacilityId())
             .orElseThrow(() -> new RuntimeException("Facility not found"));
 

@@ -9,6 +9,7 @@ public class BackendApplication {
 
 	public static void main(String[] args) {
 		// Load .env file from current directory
+		System.out.println("Searching for .env in: " + System.getProperty("user.dir"));
 		Dotenv dotenv = Dotenv.configure()
 			.ignoreIfMissing()
 			.load();
@@ -16,10 +17,9 @@ public class BackendApplication {
 		// Set environment variables from .env file
 		if (dotenv != null) {
 			dotenv.entries().forEach(entry -> {
-				if (System.getProperty(entry.getKey()) == null) {
-					System.setProperty(entry.getKey(), entry.getValue());
-				}
+				System.setProperty(entry.getKey(), entry.getValue());
 			});
+			System.out.println("Loaded " + dotenv.entries().size() + " variables from .env");
 		}
 		
 		SpringApplication.run(BackendApplication.class, args);

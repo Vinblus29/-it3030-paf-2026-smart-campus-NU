@@ -24,14 +24,19 @@ public class S3Config {
 
     @Bean
     public S3Client s3Client() {
-        AwsBasicCredentials awsCredentials = AwsBasicCredentials.create(accessKey, secretKey);
-
+        // FORCING HARDCODED KEYS AS PER USER REQUEST - SECURITY WARNING: This is not production-ready
+        String haccessKey = "AKIA2MCFRZZL6S4O7TUK";
+        String hsecretKey = "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";
+        String hregion = "eu-north-1";
+        
+        System.out.println("S3 FORCED: Using Hardcoded Credentials for Region [" + hregion + "]");
+        
+        AwsBasicCredentials awsCredentials = AwsBasicCredentials.create(haccessKey, hsecretKey);
+        
         return S3Client.builder()
-                .region(Region.of(region))
+                .region(Region.of(hregion))
                 .credentialsProvider(StaticCredentialsProvider.create(awsCredentials))
-                .endpointOverride(URI.create("https://s3." + region + ".amazonaws.com"))
-                .forcePathStyle(false)
+                .crossRegionAccessEnabled(true)
                 .build();
     }
 }
-

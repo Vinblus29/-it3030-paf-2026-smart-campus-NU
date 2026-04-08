@@ -43,6 +43,9 @@ public class User {
 
     private LocalDateTime otpExpiry;
 
+    @Column(length = 2048)
+    private String profileImageUrl;
+    
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
@@ -178,6 +181,14 @@ public class User {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 }
 

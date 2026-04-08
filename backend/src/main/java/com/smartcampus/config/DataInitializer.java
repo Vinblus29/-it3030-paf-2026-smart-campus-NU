@@ -14,12 +14,15 @@ import java.time.LocalDateTime;
 public class DataInitializer {
 
     @Bean
-    CommandLineRunner initDatabase(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    CommandLineRunner initDatabase(UserRepository userRepository, 
+                                   com.smartcampus.repository.ChatGroupRepository groupRepository,
+                                   PasswordEncoder passwordEncoder) {
         return args -> {
             // Only seed if database is empty
             if (userRepository.count() == 0) {
                 
                 // Create ADMIN user
+// ... (omitted parts for brevity in matching, but I'll replace the whole block)
                 User admin = new User();
                 admin.setEmail("admin@smartuni.com");
                 admin.setPassword(passwordEncoder.encode("admin123"));
@@ -54,16 +57,23 @@ public class DataInitializer {
                 user.setEnabled(true);
                 user.setCreatedAt(LocalDateTime.now());
                 userRepository.save(user);
+
+                // Create Broadcast Groups
+                if (groupRepository.count() == 0) {
+                    groupRepository.save(new com.smartcampus.model.ChatGroup("Year 1 Announcements", "Official broadcasts for Year 1 students", true));
+                    groupRepository.save(new com.smartcampus.model.ChatGroup("Year 2 Announcements", "Official broadcasts for Year 2 students", true));
+                    groupRepository.save(new com.smartcampus.model.ChatGroup("Year 3 Announcements", "Official broadcasts for Year 3 students", true));
+                    groupRepository.save(new com.smartcampus.model.ChatGroup("Year 4 Announcements", "Official broadcasts for Year 4 students", true));
+                }
                 
                 System.out.println("========================================");
-                System.out.println("Database seeded with test users:");
+                System.out.println("Database seeded with test users & groups:");
                 System.out.println("----------------------------------------");
-                System.out.println("ADMIN    | Email: admin@smartuni.com    | Password: admin123");
-                System.out.println("TECHNICIAN | Email: technician@smartuni.com | Password: tech123");
-                System.out.println("USER     | Email: user@smartuni.com     | Password: user123");
+                System.out.println("ADMIN      | Email: admin@smartuni.com");
+                System.out.println("TECHNICIAN | Email: technician@smartuni.com");
+                System.out.println("USER       | Email: user@smartuni.com");
+                System.out.println("Groups     | Year 1 - Year 4 Announcements created");
                 System.out.println("========================================");
-            } else {
-                System.out.println("Database already contains users, skipping seeding.");
             }
         };
     }

@@ -51,9 +51,63 @@ public class AuthController {
         return ResponseEntity.ok("Password reset successfully");
     }
 
+    @PostMapping("/phone/generate-otp")
+    public ResponseEntity<?> generatePhoneOtp(@RequestBody java.util.Map<String, String> req) {
+        authService.generatePhoneOtp(req.get("phoneNumber"));
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/phone/verify-otp")
+    public ResponseEntity<?> verifyPhoneOtp(@RequestBody java.util.Map<String, String> req) {
+        authService.verifyPhoneOtp(req.get("phoneNumber"), req.get("otp"));
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getCurrentUser() {
         return ResponseEntity.ok(authService.getCurrentUserResponse());
+    }
+
+    @PostMapping("/upload-profile-image")
+    public ResponseEntity<String> uploadProfileImage(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        System.out.println("Processing profile image upload: " + file.getOriginalFilename());
+        String url = authService.uploadProfileImage(file);
+        return ResponseEntity.ok(url);
+    }
+
+    @PutMapping("/profile-image")
+    public ResponseEntity<?> updateProfileImage(@RequestBody java.util.Map<String, String> request) {
+        authService.updateProfileImage(request.get("imageUrl"));
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<UserResponse> updateProfile(@RequestBody UserProfileUpdateRequest request) {
+        return ResponseEntity.ok(authService.updateProfile(request));
+    }
+
+    @PostMapping("/register/send-otp-email")
+    public ResponseEntity<?> sendRegOtpEmail(@RequestBody java.util.Map<String, String> req) {
+        authService.sendRegistrationOtpEmail(req.get("email"));
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/register/verify-otp-email")
+    public ResponseEntity<?> verifyRegOtpEmail(@RequestBody java.util.Map<String, String> req) {
+        authService.verifyRegistrationOtpEmail(req.get("email"), req.get("otp"));
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/register/send-otp-phone")
+    public ResponseEntity<?> sendRegOtpPhone(@RequestBody java.util.Map<String, String> req) {
+        authService.sendRegistrationOtpPhone(req.get("phone"));
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/register/verify-otp-phone")
+    public ResponseEntity<?> verifyRegOtpPhone(@RequestBody java.util.Map<String, String> req) {
+        authService.verifyRegistrationOtpPhone(req.get("phone"), req.get("otp"));
+        return ResponseEntity.ok().build();
     }
 }
 

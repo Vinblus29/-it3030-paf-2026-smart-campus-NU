@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './layouts/DashboardLayout';
+import { useAuth } from './context/AuthContext';
 
 // Auth Pages
 import Login from './pages/auth/Login';
@@ -23,6 +24,9 @@ import TicketsPage from './pages/tickets/TicketsPage';
 import MyTicketsPage from './pages/tickets/MyTicketsPage';
 import NotificationsPage from './pages/notifications/NotificationsPage';
 import UsersPage from './pages/users/UsersPage';
+import ProfilePage from './pages/profile/ProfilePage';
+import CampusMapPage from './pages/map/CampusMapPage';
+import ChatPage from './pages/chat/ChatPage';
 
 function App() {
   return (
@@ -36,20 +40,18 @@ function App() {
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/oauth2/callback" element={<OAuth2Callback />} />
           <Route path="/oauth2/callback/microsoft" element={<OAuth2Callback />} />
-          
+
           {/* Protected Routes with Dashboard Layout */}
           <Route element={
             <ProtectedRoute>
               <DashboardLayout />
             </ProtectedRoute>
           }>
-            {/* Dashboard Routes */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute roles={['ADMIN', 'USER', 'TECHNICIAN']}>
-                <DashboardContent />
-              </ProtectedRoute>
-            } />
-            
+            <Route path="/dashboard" element={<DashboardContent />} />
+            <Route path="/chat" element={<ChatPage />} />
+
+            {/* Admin Routes */}
+
             {/* Admin Routes */}
             <Route path="/facilities" element={
               <ProtectedRoute roles={['ADMIN', 'USER', 'TECHNICIAN']}>
@@ -71,7 +73,7 @@ function App() {
                 <UsersPage />
               </ProtectedRoute>
             } />
-            
+
             {/* User Routes */}
             <Route path="/my-bookings" element={
               <ProtectedRoute roles={['ADMIN', 'USER']}>
@@ -83,15 +85,25 @@ function App() {
                 <MyTicketsPage />
               </ProtectedRoute>
             } />
-            
+
             {/* Shared Routes */}
             <Route path="/notifications" element={
               <ProtectedRoute roles={['ADMIN', 'USER', 'TECHNICIAN']}>
                 <NotificationsPage />
               </ProtectedRoute>
             } />
+            <Route path="/profile" element={
+              <ProtectedRoute roles={['ADMIN', 'USER', 'TECHNICIAN']}>
+                <ProfilePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/map" element={
+              <ProtectedRoute roles={['ADMIN', 'USER', 'TECHNICIAN']}>
+                <CampusMapPage />
+              </ProtectedRoute>
+            } />
           </Route>
-          
+
           {/* Redirects */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -102,11 +114,9 @@ function App() {
 }
 
 // Dashboard Content Component - renders different dashboard based on role
-import { useAuth } from './context/AuthContext';
-
 const DashboardContent = () => {
   const { isAdmin, isTechnician } = useAuth();
-  
+
   if (isAdmin) {
     return <AdminDashboard />;
   } else if (isTechnician) {

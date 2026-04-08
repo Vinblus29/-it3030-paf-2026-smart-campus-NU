@@ -37,6 +37,16 @@ public class TicketController {
         return service.updateStatus(id, request);
     }
 
+    @GetMapping("/my-tickets")
+    public List<TicketResponse> getMyTickets() {
+        return service.getMyTickets();
+    }
+
+    @GetMapping("/assigned")
+    public List<TicketResponse> getAssignedTickets() {
+        return service.getAssignedTickets();
+    }
+
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         service.deleteTicket(id);
