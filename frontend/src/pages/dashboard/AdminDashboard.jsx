@@ -72,6 +72,7 @@ const AdminDashboard = () => {
     totalTickets: 0, pendingTickets: 0, totalUsers: 0, pendingUsers: 0, enabledUsers: 0
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [recentBookings, setRecentBookings] = useState([]);
   const [recentTickets, setRecentTickets] = useState([]);
   const [bookingStats, setBookingStats] = useState({});
@@ -126,6 +127,7 @@ const AdminDashboard = () => {
       setRecentTickets(recentList.slice(0, 5));
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      setError('Failed to load dashboard data. Please ensure the backend is running and the database schema is up to date.');
     } finally {
       setLoading(false);
     }
@@ -178,6 +180,15 @@ const AdminDashboard = () => {
 
   return (
     <div style={{ fontFamily: "'Inter', -apple-system, sans-serif", color: '#1a1a2e' }}>
+      {error && (
+        <div style={{ 
+          background: '#fff1f0', border: '1px solid #ffa39e', borderRadius: 6, 
+          padding: '12px 20px', marginBottom: 20, color: '#cf1322', fontWeight: 600,
+          display: 'flex', alignItems: 'center', gap: 10
+        }}>
+          <WarningOutlined /> {error}
+        </div>
+      )}
 
       {/* ── Welcome Banner ── */}
       <div style={{
