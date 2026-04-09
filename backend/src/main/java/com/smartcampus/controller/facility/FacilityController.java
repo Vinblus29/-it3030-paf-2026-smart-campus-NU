@@ -83,5 +83,10 @@ public class FacilityController {
     public ResponseEntity<List<FacilityDTO>> searchByTags(@RequestParam java.util.Set<String> tags) {
         return ResponseEntity.ok(facilityService.searchFacilitiesByTags(tags));
     }
+
+    @GetMapping("/under-utilized")
+    public ResponseEntity<List<FacilityDTO>> getUnderUtilized() {
+        return ResponseEntity.ok(facilityService.getUnderUtilizedResources());
+    }
 }
 

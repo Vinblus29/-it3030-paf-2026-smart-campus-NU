@@ -120,6 +120,13 @@ public class FacilityService {
             .collect(Collectors.toList());
     }
 
+    public List<FacilityDTO> getUnderUtilizedResources() {
+        return facilityRepository.findAll().stream()
+            .map(this::mapToDTO)
+            .filter(dto -> dto.getUtilizationPercentage() < 30.0)
+            .collect(Collectors.toList());
+    }
+
     public String calculateHealthScore(Long facilityId) {
         long openTickets = maintenanceTicketRepository.countByFacilityIdAndStatusNot(facilityId, "CLOSED");
         List<com.smartcampus.model.MaintenanceTicket> tickets = maintenanceTicketRepository.findByFacilityId(facilityId);
