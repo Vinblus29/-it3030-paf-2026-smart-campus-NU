@@ -35,5 +35,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByFacilityIdAndStartTimeAfter(Long facilityId, LocalDateTime startTime);
 
     List<Booking> findByFacilityIdAndStartTimeBetween(Long facilityId, LocalDateTime start, LocalDateTime end);
+
+    // Bug #2 Fix: Direct token lookup instead of full table scan
+    java.util.Optional<Booking> findByQrToken(String qrToken);
+
+    // For reminder cron job
+    List<Booking> findByStatusAndStartTimeBetween(String status, LocalDateTime start, LocalDateTime end);
 }
 

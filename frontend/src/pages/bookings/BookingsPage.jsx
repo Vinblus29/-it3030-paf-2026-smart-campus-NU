@@ -54,7 +54,9 @@ const BookingsPage = () => {
     total: bookings.length,
     pending: bookings.filter(b => b.status === 'PENDING').length,
     approved: bookings.filter(b => b.status === 'APPROVED').length,
-    rejected: bookings.filter(b => b.status === 'REJECTED' || b.status === 'CANCELLED').length,
+    rejected: bookings.filter(b => b.status === 'REJECTED').length,
+    cancelled: bookings.filter(b => b.status === 'CANCELLED').length,
+    noShow: bookings.filter(b => b.status === 'NO_SHOW').length,
   };
 
   const filteredBookings = useMemo(() => {
@@ -325,9 +327,11 @@ const BookingsPage = () => {
           { label: 'Site-wide Bookings', value: stats.total, color: '#1677ff' },
           { label: 'Pending Reviews', value: stats.pending, color: '#fa8c16' },
           { label: 'Active Approvals', value: stats.approved, color: '#52c41a' },
-          { label: 'Rejected/Cancelled', value: stats.rejected, color: '#d9d9d9' },
+          { label: 'Rejected', value: stats.rejected, color: '#f5222d' },
+          { label: 'Cancelled', value: stats.cancelled, color: '#8c8c8c' },
+          { label: 'No-Shows', value: stats.noShow, color: '#722ed1' },
         ].map(({ label, value, color }) => (
-          <Col xs={12} sm={6} key={label}>
+          <Col xs={12} sm={8} md={4} key={label}>
             <Card size="small" style={{ borderTop: `3px solid ${color}` }}>
               <Statistic title={label} value={value} valueStyle={{ color, fontSize: 22 }} />
             </Card>
