@@ -2,6 +2,7 @@ package com.smartcampus.service.chat;
 
 import com.smartcampus.dto.chat.ChatMessageDto;
 import com.smartcampus.dto.chat.ChatGroupDto;
+import com.smartcampus.dto.auth.UserResponse;
 import com.smartcampus.model.ChatMessage;
 import com.smartcampus.model.ChatGroup;
 import com.smartcampus.model.User;
@@ -28,16 +29,19 @@ public class ChatService {
     private final NotificationRepository notificationRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final S3Service s3Service;
+    private final com.smartcampus.service.notification.PushNotificationService pushNotificationService;
 
     public ChatService(ChatRepository chatRepository, ChatGroupRepository groupRepository, 
                        UserRepository userRepository, NotificationRepository notificationRepository, 
-                       SimpMessagingTemplate messagingTemplate, S3Service s3Service) {
+                       SimpMessagingTemplate messagingTemplate, S3Service s3Service,
+                       com.smartcampus.service.notification.PushNotificationService pushNotificationService) {
         this.chatRepository = chatRepository;
         this.groupRepository = groupRepository;
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;
         this.messagingTemplate = messagingTemplate;
         this.s3Service = s3Service;
+        this.pushNotificationService = pushNotificationService;
     }
 
     @Transactional
@@ -55,11 +59,26 @@ public class ChatService {
         ChatMessage saved = chatRepository.save(message);
         ChatMessageDto dto = mapToDto(saved);
 
-        // Send real-time via WebSocket
-        messagingTemplate.convertAndSendToUser(recipient.getEmail(), "/queue/messages", dto);
+        // Send real-time via WebSocket - using ID-based topic for better reliability
+        messagingTemplate.convertAndSend("/topic/private/" + recipient.getId(), dto);
         
         // Also send notification
         createNotification(recipient, "New Message", sender.getFirstName() + " sent you a message.", "CHAT", saved.getId());
+
+        try {
+            String pushBody = content;
+            if (pushBody == null || pushBody.isBlank()) {
+                pushBody = attachmentUrl != null ? "Sent an attachment" : "New message";
+            } else if (pushBody.length() > 100) {
+                pushBody = pushBody.substring(0, 97) + "...";
+            }
+
+            pushNotificationService.sendToUser(recipient, 
+                "💬 Message from " + sender.getFirstName(), 
+                pushBody);
+        } catch (Exception e) {
+            System.err.println("Direct message push failed for recipient " + recipient.getEmail() + ": " + e.getMessage());
+        }
 
         return dto;
     }
@@ -89,6 +108,19 @@ public class ChatService {
         group.getMembers().forEach(member -> {
             if (!member.getId().equals(sender.getId())) {
                 createNotification(member, "Announcment: " + group.getName(), content, "BROADCAST", saved.getId());
+                
+                try {
+                    String pushBody = content;
+                    if (pushBody != null && pushBody.length() > 100) {
+                        pushBody = pushBody.substring(0, 97) + "...";
+                    }
+                    
+                    pushNotificationService.sendToUser(member, 
+                        "📢 " + group.getName(), 
+                        pushBody);
+                } catch (Exception e) {
+                    System.err.println("Group broadcast push failed for member " + member.getEmail() + ": " + e.getMessage());
+                }
             }
         });
 
@@ -137,11 +169,31 @@ public class ChatService {
     }
 
     public List<ChatGroupDto> getUserGroups(User user) {
-        // This assumes groupRepository has a findByUser or similar
-        // For now, let's filter manually if no specific repo method exists
+        if (user.getRole().name().equals("ADMIN")) {
+            return groupRepository.findAll().stream()
+                    .map(this::mapToGroupDto)
+                    .collect(Collectors.toList());
+        }
+        
         return groupRepository.findAll().stream()
-                .filter(g -> g.getMembers().contains(user) || user.getRole().name().equals("ADMIN"))
+                .filter(g -> g.isBroadcastOnly() || g.getMembers().stream().anyMatch(m -> m.getId().equals(user.getId())))
                 .map(this::mapToGroupDto)
+                .collect(Collectors.toList());
+    }
+
+    public List<UserResponse> getRecentChatUsers(User user) {
+        return chatRepository.findRecentChatUsers(user.getId()).stream()
+                .map(u -> new UserResponse(
+                        u.getId(),
+                        u.getEmail(),
+                        u.getFirstName(),
+                        u.getLastName(),
+                        u.getPhoneNumber(),
+                        u.getRole(),
+                        u.isEnabled(),
+                        u.getCreatedAt(),
+                        u.getProfileImageUrl()
+                ))
                 .collect(Collectors.toList());
     }
 
@@ -163,7 +215,7 @@ public class ChatService {
         
         // Send notification unread count via WebSocket
         long count = notificationRepository.countByUserAndReadFalse(user);
-        messagingTemplate.convertAndSendToUser(user.getEmail(), "/queue/notifications", count);
+        messagingTemplate.convertAndSend("/topic/private/" + user.getId() + "/notifications", count);
     }
 
     private ChatMessageDto mapToDto(ChatMessage m) {

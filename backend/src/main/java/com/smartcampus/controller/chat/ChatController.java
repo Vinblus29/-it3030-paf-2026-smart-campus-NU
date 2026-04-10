@@ -2,6 +2,7 @@ package com.smartcampus.controller.chat;
 
 import com.smartcampus.dto.chat.ChatMessageDto;
 import com.smartcampus.dto.chat.ChatGroupDto;
+import com.smartcampus.dto.auth.UserResponse;
 import com.smartcampus.model.User;
 import com.smartcampus.service.chat.ChatService;
 import org.springframework.http.ResponseEntity;
@@ -53,6 +54,12 @@ public class ChatController {
     public ResponseEntity<List<ChatGroupDto>> getMyGroups() {
         User user = authService.getCurrentUser();
         return ResponseEntity.ok(chatService.getUserGroups(user));
+    }
+
+    @GetMapping("/recent")
+    public ResponseEntity<List<UserResponse>> getRecentChats() {
+        User user = authService.getCurrentUser();
+        return ResponseEntity.ok(chatService.getRecentChatUsers(user));
     }
 
     @PostMapping("/upload-attachment")

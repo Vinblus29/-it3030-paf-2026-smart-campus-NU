@@ -28,17 +28,20 @@ public class BookingService {
     private final NotificationRepository notificationRepository;
     private final BookingWaitlistRepository bookingWaitlistRepository;
     private final AuthService authService;
+    private final com.smartcampus.service.notification.PushNotificationService pushNotificationService;
 
     public BookingService(BookingRepository bookingRepository,
                          FacilityRepository facilityRepository,
                          NotificationRepository notificationRepository,
                          BookingWaitlistRepository bookingWaitlistRepository,
-                         AuthService authService) {
+                         AuthService authService,
+                        com.smartcampus.service.notification.PushNotificationService pushNotificationService) {
         this.bookingRepository = bookingRepository;
         this.facilityRepository = facilityRepository;
         this.notificationRepository = notificationRepository;
         this.bookingWaitlistRepository = bookingWaitlistRepository;
         this.authService = authService;
+        this.pushNotificationService = pushNotificationService;
     }
 
     public List<BookingDTO> getAllBookings() {
@@ -244,9 +247,14 @@ public class BookingService {
 
         booking = bookingRepository.save(booking);
 
-        // Send notification
+        // In-app notification
         createNotification(booking.getUser(), "Booking Approved", 
             "Your booking for " + booking.getFacility().getName() + " has been approved", "BOOKING");
+
+        // Push notification
+        pushNotificationService.sendToUser(booking.getUser(),
+            "✅ Booking Approved",
+            "Your booking for " + booking.getFacility().getName() + " has been approved.");
 
         return mapToDTO(booking);
     }
@@ -266,9 +274,14 @@ public class BookingService {
 
         booking = bookingRepository.save(booking);
 
-        // Send notification
+        // In-app notification
         createNotification(booking.getUser(), "Booking Rejected", 
             "Your booking for " + booking.getFacility().getName() + " has been rejected: " + reason, "BOOKING");
+
+        // Push notification
+        pushNotificationService.sendToUser(booking.getUser(),
+            "❌ Booking Rejected",
+            "Your booking for " + booking.getFacility().getName() + " was rejected: " + reason);
 
         return mapToDTO(booking);
     }

@@ -13,9 +13,12 @@ import {
   HistoryOutlined,
   SettingOutlined,
   SendOutlined,
+  NotificationOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons';
 import { Pie } from '@ant-design/charts';
 import { useAuth } from '../../context/AuthContext';
+import { Modal, Input, Button as AntdButton, message } from 'antd';
 import bookingService from '../../services/bookingService';
 import facilityService from '../../services/facilityService';
 import ticketService from '../../services/ticketService';
@@ -77,6 +80,9 @@ const AdminDashboard = () => {
   const [recentTickets, setRecentTickets] = useState([]);
   const [bookingStats, setBookingStats] = useState({});
   const [ticketStats, setTicketStats] = useState({});
+  const [broadcastModal, setBroadcastModal] = useState(false);
+  const [broadcastData, setBroadcastData] = useState({ title: '', body: '' });
+  const [broadcasting, setBroadcasting] = useState(false);
 
   useEffect(() => { fetchDashboardData(); }, []);
 
@@ -147,6 +153,24 @@ const AdminDashboard = () => {
     label: { text: 'value', style: { fontWeight: 600, fontSize: 12 } },
     legend: { position: 'bottom' },
     color: ['#0f3460', '#f5a623', '#52c41a', '#8c8c8c'],
+  };
+
+  const handleBroadcast = async () => {
+    if (!broadcastData.title || !broadcastData.body) {
+      return message.warning('Please enter both title and message');
+    }
+    setBroadcasting(true);
+    try {
+      await axios.post('/api/notifications/push/broadcast', broadcastData);
+      message.success('Push notification broadcasted successfully!');
+      setBroadcastModal(false);
+      setBroadcastData({ title: '', body: '' });
+    } catch (error) {
+      console.error('Broadcast failed:', error);
+      message.error(error.response?.data?.message || 'Failed to send broadcast');
+    } finally {
+      setBroadcasting(false);
+    }
   };
 
   const bookingColumns = [
@@ -345,10 +369,11 @@ const AdminDashboard = () => {
             { icon: <CalendarOutlined />, label: 'Manage Bookings', href: '/bookings', accent: '#f5a623' },
             { icon: <ToolOutlined />, label: 'Manage Tickets', href: '/tickets', accent: '#e94560' },
             { icon: <ApartmentOutlined />, label: 'Manage Facilities', href: '/facilities', accent: '#52c41a' },
+            { icon: <NotificationOutlined />, label: 'Broadcast Info', onClick: () => setBroadcastModal(true), accent: '#e94560' },
             { icon: <SendOutlined />, label: 'Campus Chat', href: '/chat', accent: '#0f3460' },
             { icon: <CheckCircleOutlined />, label: 'QR Check-in', href: '/bookings/qr-check-in', accent: '#a569bd' },
-          ].map(({ icon, label, href, accent }) => (
-            <a key={href} href={href} style={{
+          ].map(({ icon, label, href,onClick, accent }) => (
+            <a key={href} href={href|| '#'} onClick={onClick} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               gap: 8, padding: '16px 10px', background: accent + '08', borderRadius: 6, textDecoration: 'none',
               border: `1px solid ${accent}22`, transition: 'all 0.2s',
@@ -362,6 +387,45 @@ const AdminDashboard = () => {
           ))}
         </div>
       </div>
+
+      {/* ── Broadcast Modal ── */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <NotificationOutlined style={{ color: '#e94560' }} />
+            <span>Send Campus-wide Announcement</span>
+          </div>
+        }
+        open={broadcastModal}
+        onOk={handleBroadcast}
+        onCancel={() => setBroadcastModal(false)}
+        confirmLoading={broadcasting}
+        okText="Send Announcement"
+        okButtonProps={{ style: { background: '#e94560' } }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 10 }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#666', marginBottom: 4 }}>Announcement Title</div>
+            <Input
+              placeholder="e.g. Campus Holiday Tomorrow"
+              value={broadcastData.title}
+              onChange={e => setBroadcastData({ ...broadcastData, title: e.target.value })}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#666', marginBottom: 4 }}>Message Content</div>
+            <Input.TextArea
+              rows={4}
+              placeholder="Enter the notification body..."
+              value={broadcastData.body}
+              onChange={e => setBroadcastData({ ...broadcastData, body: e.target.value })}
+            />
+          </div>
+          <div style={{ background: '#fff7e6', padding: 12, borderRadius: 6, fontSize: 11, color: '#ad6800' }}>
+            <InfoCircleOutlined /> This will send a real-time push notification via AWS SNS to all registered student and staff devices.
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

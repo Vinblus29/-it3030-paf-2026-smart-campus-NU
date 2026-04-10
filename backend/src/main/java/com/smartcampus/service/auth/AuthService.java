@@ -17,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 public class AuthService {
@@ -27,6 +30,11 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JavaMailSender mailSender;
     private final com.smartcampus.service.S3Service s3Service;
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
+
+    @Value("${MAIL_FROM:Smart Campus <noreply@smartcampus.com>}")
+    private String mailFrom;
 
     public AuthService(UserRepository userRepository, 
                       PasswordEncoder passwordEncoder,

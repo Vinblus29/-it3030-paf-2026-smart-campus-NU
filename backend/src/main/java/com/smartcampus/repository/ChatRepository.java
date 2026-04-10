@@ -15,6 +15,12 @@ public interface ChatRepository extends JpaRepository<ChatMessage, Long> {
 
     List<ChatMessage> findByGroupIdOrderByTimestampAsc(Long groupId);
 
+    @Query("SELECT u FROM User u WHERE u.id IN (" +
+           "  SELECT DISTINCT CASE WHEN m.sender.id = :userId THEN m.recipient.id ELSE m.sender.id END " +
+           "  FROM ChatMessage m WHERE (m.sender.id = :userId OR m.recipient.id = :userId) AND m.recipient IS NOT NULL" +
+           ")")
+    List<User> findRecentChatUsers(@org.springframework.data.repository.query.Param("userId") Long userId);
+
     @Query("SELECT COUNT(m) FROM ChatMessage m WHERE m.recipient = :user AND m.read = false")
     long countUnreadMessages(User user);
 }

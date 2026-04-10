@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { message } from 'antd';
+import { requestFCMToken } from '../firebase';
 
 const AuthContext = createContext(null);
 
@@ -23,12 +24,12 @@ export const AuthProvider = ({ children }) => {
   // Reset inactivity timer on user activity
   const resetInactivityTimer = useCallback(() => {
     lastActivityRef.current = Date.now();
-    
+
     // Clear existing timer
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
-    
+
     // Set new timer for auto-logout
     if (user) {
       inactivityTimerRef.current = setTimeout(() => {
@@ -65,7 +66,7 @@ export const AuthProvider = ({ children }) => {
     // Check for token or OAuth user in localStorage
     const token = localStorage.getItem('token');
     const oauthUser = localStorage.getItem('user');
-    
+
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       fetchCurrentUser();
@@ -82,7 +83,19 @@ export const AuthProvider = ({ children }) => {
   const fetchCurrentUser = async () => {
     try {
       const response = await axios.get('/api/auth/me');
-      setUser(response.data);
+      const userData = response.data;
+      setUser(userData);
+
+      // Always attempt to register push notification token on refresh
+      try {
+        const fcmToken = await requestFCMToken();
+        if (fcmToken) {
+          await axios.post('/api/notifications/push/register', { fcmToken });
+          localStorage.setItem('smartuni_fcm_token', fcmToken);
+        }
+      } catch (err) {
+        console.warn('FCM register failed on refresh:', err);
+      }
     } catch (error) {
       localStorage.removeItem('token');
       delete axios.defaults.headers.common['Authorization'];
@@ -94,14 +107,26 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password, rememberMe = false) => {
     const response = await axios.post('/api/auth/login', { email, password, rememberMe });
     const { token, user: userData } = response.data;
-    
+
     // Store token (extended expiration if rememberMe is true)
     const expirationTime = rememberMe ? (7 * 24 * 60 * 60 * 1000) : INACTIVITY_TIMEOUT;
     localStorage.setItem('token', token);
     localStorage.setItem('tokenExpiry', Date.now() + expirationTime);
-    
+
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     setUser(userData);
+
+    // Register push notification token
+    try {
+      const fcmToken = await requestFCMToken();
+      if (fcmToken) {
+        await axios.post('/api/notifications/push/register', { fcmToken });
+        localStorage.setItem('smartuni_fcm_token', fcmToken);
+      }
+    } catch (err) {
+      console.warn('FCM registration failed:', err);
+    }
+
     return userData;
   };
 
@@ -117,6 +142,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('tokenExpiry');
     localStorage.removeItem('rememberedEmail');
     localStorage.removeItem('user');
+    localStorage.removeItem('smartuni_fcm_token');
     delete axios.defaults.headers.common['Authorization'];
     setUser(null);
     if (inactivityTimerRef.current) {

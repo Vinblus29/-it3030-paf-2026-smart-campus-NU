@@ -36,15 +36,17 @@ public class TicketService {
     private final NotificationRepository notificationRepository;
     private final AuthService authService;
     private final S3Service s3Service;
+    private final com.smartcampus.service.notification.PushNotificationService pushNotificationService;
 
     public TicketService(TicketRepository ticketRepository, UserRepository userRepository,
                          NotificationRepository notificationRepository, AuthService authService,
-                         S3Service s3Service) {
+                         S3Service s3Service,com.smartcampus.service.notification.PushNotificationService pushNotificationService) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;
         this.authService = authService;
         this.s3Service = s3Service;
+        this.pushNotificationService = pushNotificationService;
     }
 
     @Transactional
@@ -206,76 +208,102 @@ public class TicketService {
     }
 
     @Transactional
-    public TicketResponse updateStatus(Long id, UpdateStatusRequest request) {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser.getRole() == Role.USER) {
-            throw new RuntimeException("Not authorized to update ticket status");
+public TicketResponse updateStatus(Long id, UpdateStatusRequest request) {
+
+    User currentUser = authService.getCurrentUser();
+
+    // 🚫 USER cannot update status
+    if (currentUser.getRole() == Role.USER) {
+        throw new RuntimeException("Not authorized to update ticket status");
+    }
+
+    // 🚫 Technician restrictions
+    if (currentUser.getRole() == Role.TECHNICIAN &&
+            request.getStatus() != TicketStatus.IN_PROGRESS &&
+            request.getStatus() != TicketStatus.RESOLVED) {
+        throw new RuntimeException("Technicians can only set status to IN_PROGRESS or RESOLVED");
+    }
+
+    Ticket ticket = ticketRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Ticket not found"));
+
+    // 🚫 Technician can only update assigned tickets
+    if (currentUser.getRole() == Role.TECHNICIAN) {
+        if (ticket.getAssignee() == null ||
+                !ticket.getAssignee().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("You can only update tickets assigned to you");
         }
+    }
 
-        // Technician can only set IN_PROGRESS or RESOLVED
-        if (currentUser.getRole() == Role.TECHNICIAN &&
-                request.getStatus() != TicketStatus.IN_PROGRESS &&
-                request.getStatus() != TicketStatus.RESOLVED) {
-            throw new RuntimeException("Technicians can only set status to IN_PROGRESS or RESOLVED");
-        }
+    // 🔄 Update status
+    TicketStatus newStatus = request.getStatus();
+    ticket.setStatus(newStatus);
 
-        Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+    if (request.getResolutionNotes() != null) {
+        ticket.setResolutionNotes(request.getResolutionNotes());
+    }
 
-        // Technician can only update tickets assigned to them
-        if (currentUser.getRole() == Role.TECHNICIAN) {
-            if (ticket.getAssignee() == null
-                    || !ticket.getAssignee().getId().equals(currentUser.getId())) {
-                throw new RuntimeException("You can only update tickets assigned to you");
-            }
-        }
+    if (newStatus == TicketStatus.REJECTED && request.getRejectionReason() != null) {
+        ticket.setRejectionReason(request.getRejectionReason());
+    }
 
-        TicketStatus newStatus = request.getStatus();
-        ticket.setStatus(newStatus);
+    if (newStatus == TicketStatus.RESOLVED) {
+        ticket.setResolvedAt(LocalDateTime.now());
+    }
 
-        if (request.getResolutionNotes() != null) {
-            ticket.setResolutionNotes(request.getResolutionNotes());
-        }
-        if (newStatus == TicketStatus.REJECTED && request.getRejectionReason() != null) {
-            ticket.setRejectionReason(request.getRejectionReason());
-        }
-        if (newStatus == TicketStatus.RESOLVED) {
-            ticket.setResolvedAt(LocalDateTime.now());
-        }
+    // 💾 Save ticket
+    Ticket saved = ticketRepository.save(ticket);
 
-        Ticket saved = ticketRepository.save(ticket);
+    // 🔔 In-app notification (DB)
+    if (ticket.getReporter() != null) {
+        Notification n = new Notification(
+                ticket.getReporter(),
+                "Ticket #" + id + " Updated",
+                "Your ticket '" + ticket.getTitle() + "' status changed to " + newStatus,
+                "TICKET"
+        );
+        n.setReferenceType("TICKET");
+        n.setReferenceId(id);
+        notificationRepository.save(n);
+    }
 
-        // Notify reporter of status change
+    // 🚀 PUSH NOTIFICATION (FCM via SNS)
+    try {
         if (ticket.getReporter() != null) {
-            Notification n = new Notification(
+
+            String statusLabel = newStatus != null ? newStatus.name() : "Updated";
+
+            pushNotificationService.sendToUser(
                     ticket.getReporter(),
-                    "Ticket #" + id + " Updated",
-                    "Your ticket '" + ticket.getTitle() + "' status changed to " + newStatus,
+                    "🎫 Ticket " + statusLabel,
+                    "Your ticket '" + ticket.getTitle() + "' status changed to " + statusLabel
+            );
+        }
+    } catch (Exception e) {
+        System.err.println("[Push] Ticket status push failed: " + e.getMessage());
+    }
+
+    // If technician resolved → notify admins
+    if (newStatus == TicketStatus.RESOLVED &&
+            currentUser.getRole() == Role.TECHNICIAN) {
+
+        userRepository.findByRole(Role.ADMIN).forEach(admin -> {
+
+            Notification n = new Notification(
+                    admin,
+                    "Ticket #" + id + " Resolved",
+                    currentUser.getFirstName() + " " + currentUser.getLastName()
+                            + " resolved ticket '" + ticket.getTitle() + "'",
                     "TICKET"
             );
             n.setReferenceType("TICKET");
             n.setReferenceId(id);
             notificationRepository.save(n);
-        }
-
-        // If technician resolved — notify all admins
-        if (newStatus == TicketStatus.RESOLVED && currentUser.getRole() == Role.TECHNICIAN) {
-            userRepository.findByRole(Role.ADMIN).forEach(admin -> {
-                Notification n = new Notification(
-                        admin,
-                        "Ticket #" + id + " Resolved",
-                        currentUser.getFirstName() + " " + currentUser.getLastName()
-                                + " resolved ticket '" + ticket.getTitle() + "'",
-                        "TICKET"
-                );
-                n.setReferenceType("TICKET");
-                n.setReferenceId(id);
-                notificationRepository.save(n);
-            });
-        }
-
-        return toResponse(saved, currentUser);
+        });
     }
+
+    return toResponse(saved, currentUser);
+}
 
     @Transactional
     public TicketResponse assignTicket(Long id, Long assigneeId) {

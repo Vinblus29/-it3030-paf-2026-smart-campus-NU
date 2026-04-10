@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Card, List, Tag, Button, Empty, Spin, Typography, Space, Badge } from 'antd';
-import { BellOutlined, CheckCircleOutlined, InfoCircleOutlined, WarningOutlined } from '@ant-design/icons';
+import { Card, List, Tag, Button, Empty, Spin, Typography, Space, Badge, message } from 'antd';
+import { BellOutlined, CheckCircleOutlined, InfoCircleOutlined, WarningOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import notificationService from '../../services/notificationService';
 
 const { Text } = Typography;
@@ -8,6 +8,7 @@ const { Text } = Typography;
 const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [markingLoading, setMarkingLoading] = useState({});
 
   useEffect(() => {
     fetchNotifications();
@@ -21,6 +22,31 @@ const NotificationsPage = () => {
       console.error('Error fetching notifications:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMarkAsRead = async (id) => {
+    setMarkingLoading(prev => ({...prev, [id]: true}));
+    try {
+      await notificationService.markAsRead(id);
+      setNotifications(nots => nots.map(n => n.id === id ? {...n, read: true} : n));
+      message.success('Marked as read');
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
+    } catch (error) {
+      message.error('Failed to mark as read');
+    } finally {
+      setMarkingLoading(prev => ({...prev, [id]: false}));
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      setNotifications(nots => nots.map(n => ({...n, read: true})));
+      message.success('All notifications marked as read');
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
+    } catch (error) {
+      message.error('Failed to mark all as read');
     }
   };
 
@@ -84,9 +110,25 @@ const NotificationsPage = () => {
             <h1 className="text-2xl font-bold text-gray-800">Notifications</h1>
             <p className="text-gray-500">View your recent notifications</p>
           </div>
-          <Badge count={notifications.length} offset={[10, 0]}>
-            <BellOutlined className="text-xl" />
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge 
+              count={notifications.filter(n => !n.read).length} 
+              offset={[10, -5]}
+              style={{ backgroundColor: '#e94560' }}
+            >
+              <BellOutlined className="text-xl" />
+            </Badge>
+            {notifications.filter(n => !n.read).length > 0 && (
+              <Button 
+                onClick={handleMarkAllRead}
+                size="small"
+                type="primary"
+                ghost
+              >
+                Mark all read
+              </Button>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -103,7 +145,21 @@ const NotificationsPage = () => {
                 actions={[
                   <Text key="time" type="secondary" className="text-sm">
                     {formatDate(notification.createdAt)}
-                  </Text>
+                  </Text>,
+                  notification.read ? (
+                    <span key="read" className="text-xs text-gray-400">✓ Read</span>
+                  ) : (
+                    <Button 
+                      key="markread" 
+                      size="small" 
+                      type="link" 
+                      loading={markingLoading[notification.id]}
+                      onClick={() => handleMarkAsRead(notification.id)}
+                      icon={<EyeOutlined />}
+                    >
+                      Mark read
+                    </Button>
+                  )
                 ]}
               >
                 <List.Item.Meta

@@ -8,6 +8,11 @@ const notificationService = {
     return response.data;
   },
 
+  getMyNotifications: async () => {
+    const response = await axios.get(API_URL);
+    return response.data;
+  },
+
   getUnreadNotifications: async () => {
     const response = await axios.get(`${API_URL}/unread`);
     return response.data;
@@ -24,7 +29,7 @@ const notificationService = {
   },
 
   markAllAsRead: async () => {
-    const response = await axios.put(`${API_URL}/mark-all-read`);
+    const response = await axios.put(`${API_URL}/read-all`);
     return response.data;
   },
 

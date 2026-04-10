@@ -45,6 +45,13 @@ public class User {
 
     @Column(length = 2048)
     private String profileImageUrl;
+
+    // Push Notification fields
+    @Column(length = 512)
+    private String fcmToken;
+
+    @Column(length = 512)
+    private String snsEndpointArn;
     
     private LocalDateTime createdAt;
 
@@ -189,6 +196,22 @@ public class User {
 
     public void setProfileImageUrl(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
+    }
+
+    public String getFcmToken() {
+        return fcmToken;
+    }
+
+    public void setFcmToken(String fcmToken) {
+        this.fcmToken = fcmToken;
+    }
+
+    public String getSnsEndpointArn() {
+        return snsEndpointArn;
+    }
+
+    public void setSnsEndpointArn(String snsEndpointArn) {
+        this.snsEndpointArn = snsEndpointArn;
     }
 }
 
