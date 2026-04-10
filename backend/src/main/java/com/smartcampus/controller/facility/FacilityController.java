@@ -49,7 +49,8 @@ public class FacilityController {
     public ResponseEntity<FacilityDTO> createFacility(
             @RequestParam("facility") String facilityJson,
             @RequestParam(value = "image", required = false) MultipartFile image) throws Exception {
-        FacilityDTO dto = new ObjectMapper().registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule()).readValue(facilityJson, FacilityDTO.class);
+        FacilityDTO dto = new ObjectMapper().registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
+                .readValue(facilityJson, FacilityDTO.class);
         return ResponseEntity.ok(facilityService.createFacility(dto, image));
     }
 
@@ -58,7 +59,8 @@ public class FacilityController {
             @PathVariable Long id,
             @RequestParam("facility") String facilityJson,
             @RequestParam(value = "image", required = false) MultipartFile image) throws Exception {
-        FacilityDTO dto = new ObjectMapper().registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule()).readValue(facilityJson, FacilityDTO.class);
+        FacilityDTO dto = new ObjectMapper().registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
+                .readValue(facilityJson, FacilityDTO.class);
         return ResponseEntity.ok(facilityService.updateFacility(id, dto, image));
     }
 
@@ -77,7 +79,8 @@ public class FacilityController {
     public ResponseEntity<java.util.Map<String, Object>> getAvailability(
             @PathVariable Long id,
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date) {
-        if (date == null) date = java.time.LocalDate.now();
+        if (date == null)
+            date = java.time.LocalDate.now();
         return ResponseEntity.ok(facilityService.getAvailabilityStatus(id, date));
     }
 
@@ -99,4 +102,3 @@ public class FacilityController {
         return ResponseEntity.ok(facilityService.getUnderUtilizedResources());
     }
 }
-
