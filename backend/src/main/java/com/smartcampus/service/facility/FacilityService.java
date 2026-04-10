@@ -8,7 +8,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class FacilityService {
@@ -17,15 +19,18 @@ public class FacilityService {
     private final com.smartcampus.repository.BookingRepository bookingRepository;
     private final com.smartcampus.repository.BlackoutPeriodRepository blackoutPeriodRepository;
     private final com.smartcampus.repository.MaintenanceTicketRepository maintenanceTicketRepository;
+    private final com.smartcampus.service.S3Service s3Service;
 
     public FacilityService(FacilityRepository facilityRepository,
                            com.smartcampus.repository.BookingRepository bookingRepository,
                            com.smartcampus.repository.BlackoutPeriodRepository blackoutPeriodRepository,
-                           com.smartcampus.repository.MaintenanceTicketRepository maintenanceTicketRepository) {
+                           com.smartcampus.repository.MaintenanceTicketRepository maintenanceTicketRepository,
+                           com.smartcampus.service.S3Service s3Service) {
         this.facilityRepository = facilityRepository;
         this.bookingRepository = bookingRepository;
         this.blackoutPeriodRepository = blackoutPeriodRepository;
         this.maintenanceTicketRepository = maintenanceTicketRepository;
+        this.s3Service = s3Service;
     }
 
     public List<FacilityDTO> getAllFacilities() {
@@ -53,17 +58,27 @@ public class FacilityService {
     }
 
     @Transactional
-    public FacilityDTO createFacility(FacilityDTO dto) {
+    public FacilityDTO createFacility(FacilityDTO dto, MultipartFile image) {
         Facility facility = new Facility();
         facility.setName(dto.getName());
         facility.setType(dto.getType());
         facility.setLocation(dto.getLocation());
         facility.setCapacity(dto.getCapacity());
         facility.setDescription(dto.getDescription());
-        facility.setImageUrl(dto.getImageUrl());
+        
+        if (image != null && !image.isEmpty()) {
+            facility.setImageUrl(s3Service.uploadFile(image));
+        } else {
+            facility.setImageUrl(dto.getImageUrl());
+        }
+
         facility.setEquipment(dto.getEquipment());
         facility.setAvailabilityWindows(dto.getAvailabilityWindows());
         facility.setAvailable(dto.isAvailable());
+        if (dto.getTags() != null) {
+            facility.getTags().clear();
+            facility.getTags().addAll(dto.getTags());
+        }
         facility.setCreatedAt(LocalDateTime.now());
 
         facility = facilityRepository.save(facility);
@@ -71,7 +86,7 @@ public class FacilityService {
     }
 
     @Transactional
-    public FacilityDTO updateFacility(Long id, FacilityDTO dto) {
+    public FacilityDTO updateFacility(Long id, FacilityDTO dto, MultipartFile image) {
         Facility facility = facilityRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Facility not found"));
 
@@ -80,10 +95,20 @@ public class FacilityService {
         facility.setLocation(dto.getLocation());
         facility.setCapacity(dto.getCapacity());
         facility.setDescription(dto.getDescription());
-        facility.setImageUrl(dto.getImageUrl());
+        
+        if (image != null && !image.isEmpty()) {
+            facility.setImageUrl(s3Service.uploadFile(image));
+        } else if (dto.getImageUrl() != null) {
+            facility.setImageUrl(dto.getImageUrl());
+        }
+
         facility.setEquipment(dto.getEquipment());
         facility.setAvailabilityWindows(dto.getAvailabilityWindows());
         facility.setAvailable(dto.isAvailable());
+        if (dto.getTags() != null) {
+            facility.getTags().clear();
+            facility.getTags().addAll(dto.getTags());
+        }
         facility.setUpdatedAt(LocalDateTime.now());
 
         facility = facilityRepository.save(facility);
@@ -113,7 +138,7 @@ public class FacilityService {
             .collect(Collectors.toList());
     }
 
-    public List<FacilityDTO> searchFacilitiesByTags(java.util.Set<String> tags) {
+    public List<FacilityDTO> searchFacilitiesByTags(Set<String> tags) {
         return facilityRepository.findAll().stream()
             .filter(f -> f.getTags().containsAll(tags))
             .map(this::mapToDTO)

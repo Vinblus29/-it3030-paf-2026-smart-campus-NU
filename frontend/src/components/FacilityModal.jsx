@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
-import { Modal, Form, Input, Select, Switch, InputNumber, message } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Modal, Form, Input, Select, Switch, InputNumber, message, Upload, Button } from 'antd';
+import { UploadOutlined } from '@ant-design/icons';
 import facilityService from '../services/facilityService';
 
 const { TextArea } = Input;
@@ -7,6 +8,8 @@ const { Option } = Select;
 
 const FacilityModal = ({ visible, facility, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
+  const [fileList, setFileList] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
   
   useEffect(() => {
     if (visible) {
@@ -14,26 +17,42 @@ const FacilityModal = ({ visible, facility, onCancel, onSuccess }) => {
         form.setFieldsValue({
           ...facility,
         });
+        if (facility.imageUrl) {
+          setFileList([{
+            uid: '-1',
+            name: 'image.png',
+            status: 'done',
+            url: facility.imageUrl,
+          }]);
+        } else {
+          setFileList([]);
+        }
       } else {
         form.resetFields();
         form.setFieldsValue({ available: true, capacity: 1 });
+        setFileList([]);
       }
     }
   }, [visible, facility, form]);
 
   const handleFinish = async (values) => {
+    setSubmitting(true);
     try {
+      const imageFile = fileList.length > 0 && fileList[0].originFileObj ? fileList[0].originFileObj : null;
+      
       if (facility) {
-        await facilityService.updateFacility(facility.id, values);
+        await facilityService.updateFacility(facility.id, values, imageFile);
         message.success('Facility updated successfully');
       } else {
-        await facilityService.createFacility(values);
+        await facilityService.createFacility(values, imageFile);
         message.success('Facility created successfully');
       }
       onSuccess();
     } catch (error) {
       console.error('Error saving facility:', error);
       message.error(facility ? 'Failed to update facility' : 'Failed to create facility');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -126,6 +145,36 @@ const FacilityModal = ({ visible, facility, onCancel, onSuccess }) => {
           help="Toggle off to mark out of service."
         >
           <Switch checkedChildren="Active" unCheckedChildren="Out of Service" />
+        </Form.Item>
+
+        <Form.Item label="Facility Image (optional)">
+          <Upload
+            listType="picture-card"
+            fileList={fileList}
+            beforeUpload={() => false}
+            onChange={({ fileList: fl }) => setFileList(fl.slice(-1))}
+            onPreview={async (file) => {
+              let src = file.url;
+              if (!src) {
+                src = await new Promise((resolve) => {
+                  const reader = new FileReader();
+                  reader.readAsDataURL(file.originFileObj);
+                  reader.onload = () => resolve(reader.result);
+                });
+              }
+              const image = new Image();
+              image.src = src;
+              const imgWindow = window.open(src);
+              imgWindow?.document.write(image.outerHTML);
+            }}
+          >
+            {fileList.length < 1 && (
+              <div>
+                <UploadOutlined />
+                <div style={{ marginTop: 8 }}>Upload</div>
+              </div>
+            )}
+          </Upload>
         </Form.Item>
       </Form>
     </Modal>
