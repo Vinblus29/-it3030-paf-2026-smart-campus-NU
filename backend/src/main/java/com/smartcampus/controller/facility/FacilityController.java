@@ -2,13 +2,16 @@ package com.smartcampus.controller.facility;
 
 import com.smartcampus.dto.facility.FacilityDTO;
 import com.smartcampus.service.facility.FacilityService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/facilities")
+@CrossOrigin
 public class FacilityController {
 
     private final FacilityService facilityService;
@@ -43,13 +46,20 @@ public class FacilityController {
     }
 
     @PostMapping
-    public ResponseEntity<FacilityDTO> createFacility(@RequestBody FacilityDTO dto) {
-        return ResponseEntity.ok(facilityService.createFacility(dto));
+    public ResponseEntity<FacilityDTO> createFacility(
+            @RequestParam("facility") String facilityJson,
+            @RequestParam(value = "image", required = false) MultipartFile image) throws Exception {
+        FacilityDTO dto = new ObjectMapper().registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule()).readValue(facilityJson, FacilityDTO.class);
+        return ResponseEntity.ok(facilityService.createFacility(dto, image));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<FacilityDTO> updateFacility(@PathVariable Long id, @RequestBody FacilityDTO dto) {
-        return ResponseEntity.ok(facilityService.updateFacility(id, dto));
+    public ResponseEntity<FacilityDTO> updateFacility(
+            @PathVariable Long id,
+            @RequestParam("facility") String facilityJson,
+            @RequestParam(value = "image", required = false) MultipartFile image) throws Exception {
+        FacilityDTO dto = new ObjectMapper().registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule()).readValue(facilityJson, FacilityDTO.class);
+        return ResponseEntity.ok(facilityService.updateFacility(id, dto, image));
     }
 
     @PutMapping("/{id}/availability")

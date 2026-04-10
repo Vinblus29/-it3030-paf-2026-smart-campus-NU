@@ -107,9 +107,13 @@ const FacilitiesPage = () => {
       key: 'facility',
       render: (_, record) => (
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
-            {record.name?.charAt(0)}
-          </div>
+          {record.imageUrl ? (
+            <img src={record.imageUrl} alt={record.name} className="w-12 h-12 rounded-lg object-cover" />
+          ) : (
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+              {record.name?.charAt(0)}
+            </div>
+          )}
           <div>
             <div className="font-medium">{record.name}</div>
             <div className="text-gray-400 text-sm">{record.location}</div>
@@ -302,6 +306,15 @@ const FacilitiesPage = () => {
       >
         {selectedFacility && (
           <div className="space-y-4">
+            {selectedFacility.imageUrl && (
+              <div className="mb-4">
+                <img 
+                  src={selectedFacility.imageUrl} 
+                  alt={selectedFacility.name} 
+                  className="w-full h-48 object-cover rounded-lg shadow-sm" 
+                />
+              </div>
+            )}
             <div className="flex justify-between items-start">
               <div>
                 <label className="text-gray-500">Name:</label>

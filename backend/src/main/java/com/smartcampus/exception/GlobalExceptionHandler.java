@@ -71,6 +71,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(response);
     }
 
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMediaTypeNotSupportedException(org.springframework.web.HttpMediaTypeNotSupportedException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("message", "Media Type Not Supported: " + ex.getMessage());
+        response.put("supported", ex.getSupportedMediaTypes());
+        response.put("contentType", ex.getContentType());
+        response.put("status", HttpStatus.UNSUPPORTED_MEDIA_TYPE.value());
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGlobalException(Exception ex) {
         ex.printStackTrace(); // Log stack trace to help debugging
