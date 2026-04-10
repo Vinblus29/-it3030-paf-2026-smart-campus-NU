@@ -3,6 +3,32 @@ import axios from 'axios';
 const API_URL = '/api/notifications';
 
 const notificationService = {
+  // Campus Announcements
+  getAnnouncements: async () => {
+    const response = await axios.get('/api/admin/announcements');
+    return response.data;
+  },
+
+  getRecentAnnouncements: async () => {
+    const response = await axios.get('/api/admin/announcements/recent');
+    return response.data;
+  },
+
+  createAnnouncement: async (data) => {
+    const response = await axios.post('/api/admin/announcements', data);
+    return response.data;
+  },
+
+  updateAnnouncement: async (id, data) => {
+    const response = await axios.put(`/api/admin/announcements/${id}`, data);
+    return response.data;
+  },
+
+  deleteAnnouncement: async (id) => {
+    await axios.delete(`/api/admin/announcements/${id}`);
+  },
+
+  // Existing notifications
   getAllNotifications: async () => {
     const response = await axios.get(API_URL);
     return response.data;

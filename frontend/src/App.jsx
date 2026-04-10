@@ -29,6 +29,7 @@ import UsersPage from './pages/users/UsersPage';
 import ProfilePage from './pages/profile/ProfilePage';
 import CampusMapPage from './pages/map/CampusMapPage';
 import ChatPage from './pages/chat/ChatPage';
+import NoticesPage from './pages/notices/NoticesPage';
 
 import { App as AntdApp } from 'antd';
 
@@ -100,6 +101,11 @@ function App() {
               <Route path="/notifications" element={
                 <ProtectedRoute roles={['ADMIN', 'USER', 'TECHNICIAN']}>
                   <NotificationsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/notices" element={
+                <ProtectedRoute roles={['ADMIN', 'USER', 'TECHNICIAN']}>
+                  <NoticesPage />
                 </ProtectedRoute>
               } />
               <Route path="/profile" element={

@@ -15,13 +15,16 @@ import {
   SendOutlined,
   NotificationOutlined,
   InfoCircleOutlined,
+  EditOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { Pie } from '@ant-design/charts';
 import { useAuth } from '../../context/AuthContext';
-import { Modal, Input, Button as AntdButton, message } from 'antd';
+import { Modal, Input, Button as AntdButton, message, Popconfirm, Space } from 'antd';
 import bookingService from '../../services/bookingService';
 import facilityService from '../../services/facilityService';
 import ticketService from '../../services/ticketService';
+import notificationService from '../../services/notificationService';
 import axios from 'axios';
 
 const STATUS_COLORS = {
@@ -49,21 +52,21 @@ const StatusBadge = ({ status }) => {
 
 const StatCard = ({ icon, label, value, sub, accent }) => (
   <div style={{
-    background: '#fff', borderRadius: 6, padding: '20px 22px',
+    background: '#fff', borderRadius: 6, padding: '16px 18px',
     borderLeft: `4px solid ${accent}`, boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-    display: 'flex', alignItems: 'center', gap: 18, flex: 1, minWidth: 0
+    display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0
   }}>
     <div style={{
-      width: 48, height: 48, borderRadius: 8, background: accent + '18',
+      width: 36, height: 36, borderRadius: 6, background: accent + '18',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 22, color: accent, flexShrink: 0
+      fontSize: 18, color: accent, flexShrink: 0
     }}>
       {icon}
     </div>
     <div style={{ minWidth: 0 }}>
-      <div style={{ fontSize: 26, fontWeight: 700, color: '#1a1a2e', lineHeight: 1.1 }}>{value}</div>
-      <div style={{ fontSize: 13, color: '#555', fontWeight: 600, marginTop: 2 }}>{label}</div>
-      {sub && <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>{sub}</div>}
+      <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a2e', lineHeight: 1.1 }}>{value}</div>
+      <div style={{ fontSize: 12, color: '#555', fontWeight: 600, marginTop: 2 }}>{label}</div>
+      {sub && <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>{sub}</div>}
     </div>
   </div>
 );
@@ -83,8 +86,13 @@ const AdminDashboard = () => {
   const [broadcastModal, setBroadcastModal] = useState(false);
   const [broadcastData, setBroadcastData] = useState({ title: '', body: '' });
   const [broadcasting, setBroadcasting] = useState(false);
+  const [announcements, setAnnouncements] = useState([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
+  const [announcementModal, setAnnouncementModal] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState(null);
+  const [announcementData, setAnnouncementData] = useState({ title: '', content: '' });
 
-  useEffect(() => { fetchDashboardData(); }, []);
+  useEffect(() => { fetchDashboardData(); fetchAnnouncements(); }, []);
 
   const fetchDashboardData = async () => {
     try {
@@ -173,6 +181,64 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchAnnouncements = async () => {
+    try {
+      setLoadingAnnouncements(true);
+      console.log('Fetching announcements from /api/admin/announcements...');
+      const data = await notificationService.getAnnouncements();
+      console.log('Announcements response:', data);
+      console.log('Announcements type:', typeof data, Array.isArray(data));
+      setAnnouncements(Array.isArray(data) ? data : (data?.content || []));
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+      console.error('Error response:', error.response);
+    } finally {
+      setLoadingAnnouncements(false);
+    }
+  };
+
+  const openAnnouncementModal = (announcement = null) => {
+    if (announcement) {
+      setEditingAnnouncement(announcement);
+      setAnnouncementData({ title: announcement.title, content: announcement.content });
+    } else {
+      setEditingAnnouncement(null);
+      setAnnouncementData({ title: '', content: '' });
+    }
+    setAnnouncementModal(true);
+  };
+
+  const handleAnnouncementSave = async () => {
+    if (!announcementData.title || !announcementData.content) {
+      return message.warning('Please enter both title and content');
+    }
+    try {
+      if (editingAnnouncement) {
+        await notificationService.updateAnnouncement(editingAnnouncement.id, announcementData);
+        message.success('Announcement updated successfully!');
+      } else {
+        await notificationService.createAnnouncement(announcementData);
+        message.success('Announcement created successfully!');
+      }
+      setAnnouncementModal(false);
+      fetchAnnouncements();
+    } catch (error) {
+      console.error('Error saving announcement:', error);
+      message.error('Failed to save announcement');
+    }
+  };
+
+  const handleAnnouncementDelete = async (id) => {
+    try {
+      await notificationService.deleteAnnouncement(id);
+      message.success('Announcement deleted successfully!');
+      fetchAnnouncements();
+    } catch (error) {
+      console.error('Error deleting announcement:', error);
+      message.error('Failed to delete announcement');
+    }
+  };
+
   const bookingColumns = [
     { title: 'Facility', dataIndex: 'facilityName', key: 'facility', render: v => <span style={{ fontWeight: 600 }}>{v || '—'}</span> },
     { title: 'Date', dataIndex: 'date', key: 'date', render: d => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
@@ -253,7 +319,49 @@ const AdminDashboard = () => {
             <StatCard icon={<ToolOutlined />} label="Total Tickets" value={stats.totalTickets} sub={`${stats.pendingTickets} open/in-progress`} accent="#e94560" />
           </div>
 
+          {/* Quick Actions under Stats */}
+          <div style={{ background: '#fff', borderRadius: 8, padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: 20 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', borderBottom: '2px solid #0f3460', paddingBottom: 12, marginBottom: 20, display: 'inline-block' }}>
+              Quick Actions
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 14 }}>
+              {[
+                { icon: <UserOutlined />, label: 'Manage Users', href: '/users', accent: '#0f3460' },
+                { icon: <CalendarOutlined />, label: 'Manage Bookings', href: '/bookings', accent: '#f5a623' },
+                { icon: <ToolOutlined />, label: 'Manage Tickets', href: '/tickets', accent: '#e94560' },
+                { icon: <ApartmentOutlined />, label: 'Manage Facilities', href: '/facilities', accent: '#52c41a' },
+                { icon: <NotificationOutlined />, label: 'Announcements', onClick: () => openAnnouncementModal(), accent: '#0f3460' },
+                { icon: <SendOutlined />, label: 'Push Broadcast', onClick: () => setBroadcastModal(true), accent: '#e94560' },
+                { icon: <SendOutlined />, label: 'Campus Chat', href: '/chat', accent: '#0f3460' },
+                { icon: <CheckCircleOutlined />, label: 'QR Check-in', href: '/bookings/qr-check-in', accent: '#a569bd' },
+              ].map(({ icon, label, href, onClick, accent }) => (
+                <a key={href || label} href={href || '#'} onClick={onClick} style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: 6, padding: '12px 10px', background: accent + '08', borderRadius: 6, textDecoration: 'none',
+                  border: `1px solid ${accent}22`, transition: 'all 0.2s ease',
+                }}
+                  onMouseEnter={e => { 
+                    e.currentTarget.style.background = accent + '18'; 
+                    e.currentTarget.style.borderColor = accent; 
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={e => { 
+                    e.currentTarget.style.background = accent + '08'; 
+                    e.currentTarget.style.borderColor = accent + '22'; 
+                    e.currentTarget.style.transform = 'none';
+                  }}
+                >
+                  <div style={{ width: 36, height: 36, borderRadius: 6, background: accent + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: accent }}>
+                    {icon}
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#333', textAlign: 'center', lineHeight: 1.3 }}>{label}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
           {(stats.pendingBookings > 0 || stats.pendingTickets > 0) && (
+
             <div style={{ display: 'flex', gap: 12 }}>
               {stats.pendingBookings > 0 && (
                 <a href="/bookings" style={{
@@ -358,35 +466,7 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* ── Quick Actions ── */}
-      <div style={{ background: '#fff', borderRadius: 6, padding: '18px 22px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', borderBottom: '2px solid #f5a623', paddingBottom: 8, marginBottom: 16, display: 'inline-block' }}>
-          Quick Actions
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
-          {[
-            { icon: <UserOutlined />, label: 'Manage Users', href: '/users', accent: '#0f3460' },
-            { icon: <CalendarOutlined />, label: 'Manage Bookings', href: '/bookings', accent: '#f5a623' },
-            { icon: <ToolOutlined />, label: 'Manage Tickets', href: '/tickets', accent: '#e94560' },
-            { icon: <ApartmentOutlined />, label: 'Manage Facilities', href: '/facilities', accent: '#52c41a' },
-            { icon: <NotificationOutlined />, label: 'Broadcast Info', onClick: () => setBroadcastModal(true), accent: '#e94560' },
-            { icon: <SendOutlined />, label: 'Campus Chat', href: '/chat', accent: '#0f3460' },
-            { icon: <CheckCircleOutlined />, label: 'QR Check-in', href: '/bookings/qr-check-in', accent: '#a569bd' },
-          ].map(({ icon, label, href,onClick, accent }) => (
-            <a key={href} href={href|| '#'} onClick={onClick} style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              gap: 8, padding: '16px 10px', background: accent + '08', borderRadius: 6, textDecoration: 'none',
-              border: `1px solid ${accent}22`, transition: 'all 0.2s',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.background = accent + '18'; e.currentTarget.style.borderColor = accent; }}
-              onMouseLeave={e => { e.currentTarget.style.background = accent + '08'; e.currentTarget.style.borderColor = accent + '22'; }}
-            >
-              <div style={{ width: 40, height: 40, borderRadius: 8, background: accent + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: accent }}>{icon}</div>
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#333', textAlign: 'center' }}>{label}</span>
-            </a>
-          ))}
-        </div>
-      </div>
+
 
       {/* ── Broadcast Modal ── */}
       <Modal
@@ -426,6 +506,86 @@ const AdminDashboard = () => {
           </div>
         </div>
       </Modal>
+
+      {/* ── Announcements Modal ── */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <NotificationOutlined style={{ color: '#0f3460' }} />
+            <span>{editingAnnouncement ? 'Edit Announcement' : 'Create Announcement'}</span>
+          </div>
+        }
+        open={announcementModal}
+        onOk={handleAnnouncementSave}
+        onCancel={() => setAnnouncementModal(false)}
+        okText={editingAnnouncement ? 'Update' : 'Create'}
+        okButtonProps={{ style: { background: '#0f3460' } }}
+        width={600}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 10 }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#666', marginBottom: 4 }}>Title</div>
+            <Input
+              placeholder="Enter announcement title"
+              value={announcementData.title}
+              onChange={e => setAnnouncementData({ ...announcementData, title: e.target.value })}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#666', marginBottom: 4 }}>Content</div>
+            <Input.TextArea
+              rows={4}
+              placeholder="Enter announcement content..."
+              value={announcementData.content}
+              onChange={e => setAnnouncementData({ ...announcementData, content: e.target.value })}
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Announcements List ── */}
+      <div style={{ background: '#fffbf0', borderRadius: 6, padding: '18px 22px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: 20, borderLeft: '4px solid #f5a623' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', borderBottom: '2px solid #0f3460', paddingBottom: 8, display: 'inline-block' }}>
+            <NotificationOutlined style={{ color: '#0f3460', marginRight: 8 }} />Campus Announcements
+          </div>
+          <AntdButton type="primary" onClick={() => openAnnouncementModal()} style={{ background: '#0f3460' }}>
+            + New Announcement
+          </AntdButton>
+        </div>
+        {loadingAnnouncements ? <Spin /> : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {announcements.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>No announcements yet. Create one to get started.</div>
+            ) : (
+              announcements.map(ann => (
+                <div key={ann.id} style={{ background: '#fafafa', borderRadius: 6, padding: 16, border: '1px solid #eee' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e', marginBottom: 4 }}>{ann.title}</div>
+                      <div style={{ fontSize: 12, color: '#666', lineHeight: 1.5 }}>{ann.content}</div>
+                      <div style={{ fontSize: 10, color: '#999', marginTop: 8 }}>
+                        {ann.createdAt ? new Date(ann.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                      </div>
+                    </div>
+                    <Space>
+                      <AntdButton size="small" icon={<EditOutlined />} onClick={() => openAnnouncementModal(ann)} />
+                      <Popconfirm
+                        title="Delete this announcement?"
+                        onConfirm={() => handleAnnouncementDelete(ann.id)}
+                        okText="Yes"
+                        cancelText="No"
+                      >
+                        <AntdButton size="small" danger icon={<DeleteOutlined />} />
+                      </Popconfirm>
+                    </Space>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

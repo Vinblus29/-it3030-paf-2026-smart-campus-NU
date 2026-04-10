@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Tag, Empty, Spin } from 'antd';
+import { Tag, Empty, Spin, message } from 'antd';
 import { Link } from 'react-router-dom';
 import {
   CalendarOutlined,
@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import bookingService from '../../services/bookingService';
 import ticketService from '../../services/ticketService';
+import notificationService from '../../services/notificationService';
 
 const STATUS_COLORS = {
   PENDING: { bg: '#fff7e6', text: '#d46b08', border: '#ffd591' },
@@ -92,11 +93,13 @@ const ActionTile = ({ icon, label, to, accent, disabled }) => {
 
 const UserDashboard = () => {
   const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
   const [myBookings, setMyBookings] = useState([]);
   const [myTickets, setMyTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [announcements, setAnnouncements] = useState([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); fetchAnnouncements(); }, []);
 
   const fetchData = async () => {
     try {
@@ -110,6 +113,18 @@ const UserDashboard = () => {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAnnouncements = async () => {
+    try {
+      setLoadingAnnouncements(true);
+      const data = await notificationService.getRecentAnnouncements();
+      setAnnouncements(data);
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+    } finally {
+      setLoadingAnnouncements(false);
     }
   };
 
@@ -129,12 +144,6 @@ const UserDashboard = () => {
   const resolutionRate = ticketStats.total > 0
     ? Math.round(((ticketStats.resolved + ticketStats.closed) / ticketStats.total) * 100)
     : 0;
-
-  const announcements = [
-    { id: 1, title: 'Library Closure', content: 'The main library will be closed for maintenance this Sunday from 8 AM to 2 PM.', type: 'alert', date: 'Oct 12' },
-    { id: 2, title: 'Annual Cultural Fest', content: 'Registrations are now open for the Annual Cultural Extravaganza!', type: 'news', date: 'Oct 10' },
-    { id: 3, title: 'New Sports Facility', content: 'The new indoor badminton court is now open for students with valid student IDs.', type: 'news', date: 'Oct 09' },
-  ];
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
@@ -185,46 +194,22 @@ const UserDashboard = () => {
         </div>
       )}
 
-      {/* ── Grid: Main Dashboard ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: 20, marginBottom: 20 }}>
-
-        {/* Left Column: Stats & Actions */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            <StatCard icon={<UserOutlined />} label="Account Status" value={user?.enabled ? 'Active' : 'Pending'} sub={user?.enabled ? 'Verified' : 'Limited Access'} accent={user?.enabled ? '#52c41a' : '#f5a623'} />
-            <StatCard icon={<CalendarOutlined />} label="Total Bookings" value={myBookings.length} sub={`${approvedBookings} approved`} accent="#0f3460" />
-            <StatCard icon={<ToolOutlined />} label="My Tickets" value={myTickets.length} sub={`${ticketStats.open} open · ${resolutionRate}% resolved`} accent="#e94560" />
-          </div>
-
-          <div style={{ background: '#fff', borderRadius: 6, padding: '18px 22px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', borderBottom: '2px solid #f5a623', paddingBottom: 8, marginBottom: 16, display: 'inline-block' }}>
-              Quick Actions
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 12 }}>
-              <ActionTile icon={<PlusOutlined />} label="New Booking" to="/my-bookings" accent="#0f3460" disabled={!user?.enabled} />
-              <ActionTile icon={<ToolOutlined />} label="New Ticket" to="/my-tickets" accent="#e94560" disabled={!user?.enabled} />
-              <ActionTile icon={<SendOutlined />} label="Campus Chat" to="/chat" accent="#0f3460" />
-              <ActionTile icon={<BuildOutlined />} label="Facilities" to="/facilities" accent="#f5a623" />
-              <ActionTile icon={<EnvironmentOutlined />} label="Campus Map" to="/map" accent="#52c41a" />
-              <ActionTile icon={<BellOutlined />} label="Notifications" to="/notifications" accent="#722ed1" />
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Notices */}
-        <div style={{ background: '#fff', borderRadius: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      {/* ── Campus Notices & Quick Actions ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, marginBottom: 20 }}>
+        {/* Campus Notices - Left */}
+        <div style={{ background: '#fffbf0', borderRadius: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderLeft: '4px solid #f5a623' }}>
           <div style={{ padding: '14px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontWeight: 700, fontSize: 14 }}><SoundOutlined style={{ color: '#f5a623', marginRight: 8 }} />Campus Notices</span>
+            <span style={{ fontWeight: 700, fontSize: 15 }}><SoundOutlined style={{ color: '#f5a623', marginRight: 8 }} />Campus Notices</span>
             <Tag color="orange" style={{ fontSize: 10, margin: 0 }}>NEW</Tag>
           </div>
-          <div style={{ padding: '4px 16px', flex: 1 }}>
-            {announcements.map(ann => (
-              <div key={ann.id} style={{ padding: '12px 0', borderBottom: '1px solid #f8f8f8' }}>
+          <div style={{ padding: '8px 16px', flex: 1 }}>
+            {announcements.slice(0, 3).map(ann => (
+              <div key={ann.id} style={{ padding: '14px 0', borderBottom: '1px solid #f8f8f8' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                  <div style={{ fontWeight: 600, fontSize: 12, color: '#1a1a2e', lineHeight: 1.3 }}>{ann.title}</div>
-                  <div style={{ fontSize: 10, color: '#999', whiteSpace: 'nowrap' }}>{ann.date}</div>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: '#1a1a2e', lineHeight: 1.3 }}>{ann.title}</div>
+                  <div style={{ fontSize: 11, color: '#999', whiteSpace: 'nowrap' }}>{ann.date}</div>
                 </div>
-                <div style={{ fontSize: 11, color: '#666', marginTop: 4, lineHeight: 1.4 }}>{ann.content}</div>
+                <div style={{ fontSize: 13, color: '#666', marginTop: 6, lineHeight: 1.4 }}>{ann.content}</div>
               </div>
             ))}
           </div>
@@ -232,9 +217,42 @@ const UserDashboard = () => {
             <Link to="/notices" style={{ color: '#0f3460', fontSize: 11, fontWeight: 700, textDecoration: 'none' }}>View All Announcements</Link>
           </div>
         </div>
+
+        {/* Quick Actions - Right */}
+        <div style={{ background: '#fff', borderRadius: 6, padding: '18px 22px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', borderBottom: '2px solid #f5a623', paddingBottom: 8, marginBottom: 16, display: 'inline-block' }}>
+            Quick Actions
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+            <ActionTile icon={<PlusOutlined />} label="New Booking" to="/my-bookings" accent="#0f3460" disabled={!user?.enabled} />
+            <ActionTile icon={<ToolOutlined />} label="New Ticket" to="/my-tickets" accent="#e94560" disabled={!user?.enabled} />
+            <ActionTile icon={<SendOutlined />} label="Campus Chat" to="/chat" accent="#0f3460" />
+            <ActionTile icon={<BuildOutlined />} label="Facilities" to="/facilities" accent="#f5a623" />
+            <ActionTile icon={<EnvironmentOutlined />} label="Campus Map" to="/map" accent="#52c41a" />
+            <ActionTile icon={<BellOutlined />} label="Notifications" to="/notifications" accent="#722ed1" />
+          </div>
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      {/* ── Stats Cards ── */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+        <div style={{ background: '#fff', borderRadius: 6, padding: '12px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `3px solid ${user?.enabled ? '#52c41a' : '#f5a623'}`, flex: 1, minWidth: 140 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#888' }}>Account Status</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e' }}>{user?.enabled ? 'Active' : 'Pending'}</div>
+        </div>
+        <div style={{ background: '#fff', borderRadius: 6, padding: '12px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '3px solid #0f3460', flex: 1, minWidth: 140 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#888' }}>Total Bookings</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e' }}>{myBookings.length}</div>
+        </div>
+        <div style={{ background: '#fff', borderRadius: 6, padding: '12px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '3px solid #e94560', flex: 1, minWidth: 140 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#888' }}>My Tickets</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e' }}>{myTickets.length}</div>
+        </div>
+      </div>
+
+      {/* ── Grid: Main Content ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+        {/* Bookings */}
         <div style={{ background: '#fff', borderRadius: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
           <div style={{ padding: '14px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e' }}>
@@ -247,10 +265,7 @@ const UserDashboard = () => {
           </div>
           <div style={{ padding: '0 8px' }}>
             {myBookings.slice(0, 4).map((item, i) => (
-              <div key={item.id || i} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 12px', borderBottom: i < 3 ? '1px solid #f7f7f7' : 'none'
-              }}>
+              <div key={item.id || i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 12px', borderBottom: i < 3 ? '1px solid #f7f7f7' : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 6, background: '#e6f0ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0f3460', fontSize: 16 }}>
                     <CalendarOutlined />
@@ -267,87 +282,33 @@ const UserDashboard = () => {
           </div>
         </div>
 
-        {/* ── Ticket Statistics Card ── */}
+        {/* Tickets */}
         <div style={{ background: '#fff', borderRadius: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
           <div style={{ padding: '14px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e' }}>
               <ToolOutlined style={{ color: '#e94560', marginRight: 8 }} />
-              My Ticket Statistics
+              My Ticket Stats
             </span>
             <Link to="/my-tickets" style={{ color: '#f5a623', fontSize: 12, fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
               View All <ArrowRightOutlined />
             </Link>
           </div>
-
           {myTickets.length === 0 ? (
             <div style={{ padding: 24 }}>
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No tickets submitted yet">
-                <Link to="/my-tickets">
-                  <button style={{ background: '#e94560', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 12 }}>
-                    Report an Issue
-                  </button>
-                </Link>
-              </Empty>
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No tickets yet" />
             </div>
           ) : (
             <div style={{ padding: '16px 20px' }}>
-
-              {/* Total + Resolution Rate */}
               <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
                 <div style={{ flex: 1, background: '#f8fafc', borderRadius: 8, padding: '12px 16px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
                   <div style={{ fontSize: 28, fontWeight: 800, color: '#1a1a2e' }}>{ticketStats.total}</div>
-                  <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginTop: 2 }}>Total Submitted</div>
+                  <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginTop: 2 }}>Total</div>
                 </div>
                 <div style={{ flex: 1, background: resolutionRate >= 70 ? '#f6ffed' : resolutionRate >= 40 ? '#fff7e6' : '#fff1f0', borderRadius: 8, padding: '12px 16px', textAlign: 'center', border: `1px solid ${resolutionRate >= 70 ? '#b7eb8f' : resolutionRate >= 40 ? '#ffd591' : '#ffa39e'}` }}>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: resolutionRate >= 70 ? '#389e0d' : resolutionRate >= 40 ? '#d46b08' : '#cf1322' }}>
-                    {resolutionRate}%
-                  </div>
-                  <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginTop: 2 }}>Resolution Rate</div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: resolutionRate >= 70 ? '#389e0d' : resolutionRate >= 40 ? '#d46b08' : '#cf1322' }}>{resolutionRate}%</div>
+                  <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginTop: 2 }}>Resolved</div>
                 </div>
               </div>
-
-              {/* Status Breakdown Bars */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[
-                  { label: 'Open', value: ticketStats.open, color: '#1677ff' },
-                  { label: 'In Progress', value: ticketStats.inProgress, color: '#fa8c16' },
-                  { label: 'Resolved', value: ticketStats.resolved, color: '#52c41a' },
-                  { label: 'Closed', value: ticketStats.closed, color: '#8c8c8c' },
-                  { label: 'Rejected', value: ticketStats.rejected, color: '#ff4d4f' },
-                ].filter(s => s.value > 0).map(({ label, value, color }) => (
-                  <div key={label}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: '#444' }}>{label}</span>
-                      <span style={{ fontSize: 12, color: '#888' }}>{value} / {ticketStats.total}</span>
-                    </div>
-                    <div style={{ height: 6, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%',
-                        width: `${(value / ticketStats.total) * 100}%`,
-                        background: color,
-                        borderRadius: 4,
-                        transition: 'width 0.6s ease',
-                      }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Priority breakdown of open tickets */}
-              {ticketStats.open > 0 && (() => {
-                const openList = myTickets.filter(t => t.status === 'OPEN');
-                const critical = openList.filter(t => t.priority === 'CRITICAL').length;
-                const high = openList.filter(t => t.priority === 'HIGH').length;
-                return (critical > 0 || high > 0) ? (
-                  <div style={{ marginTop: 14, padding: '10px 12px', background: '#fff1f0', borderRadius: 6, border: '1px solid #ffa39e', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <InfoCircleOutlined style={{ color: '#e94560', fontSize: 14, flexShrink: 0 }} />
-                    <span style={{ fontSize: 11, color: '#cf1322', fontWeight: 600 }}>
-                      {critical > 0 && `${critical} CRITICAL`}{critical > 0 && high > 0 && ', '}{high > 0 && `${high} HIGH`} priority ticket{(critical + high) > 1 ? 's' : ''} need attention
-                    </span>
-                  </div>
-                ) : null;
-              })()}
-
             </div>
           )}
         </div>
