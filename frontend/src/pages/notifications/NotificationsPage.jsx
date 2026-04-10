@@ -62,6 +62,10 @@ const NotificationsPage = () => {
         return <CheckCircleOutlined className="text-blue-500" />;
       case 'BROADCAST':
         return <WarningOutlined className="text-purple-500" />;
+      case 'FACILITY':
+        return <InfoCircleOutlined className="text-indigo-500" />;
+      case 'SYSTEM':
+        return <InfoCircleOutlined className="text-gray-500" />;
       default:
         return <BellOutlined className="text-blue-500" />;
     }
@@ -79,6 +83,10 @@ const NotificationsPage = () => {
         return 'blue';
       case 'BROADCAST':
         return 'purple';
+      case 'FACILITY':
+        return 'indigo';
+      case 'SYSTEM':
+        return 'gray';
       default:
         return 'blue';
     }
