@@ -88,6 +88,15 @@ public class AuthService {
         userRepository.save(user);
     }
 
+    @Transactional
+    public UserResponse registerAdminCreatedUser(RegisterRequest request) {
+        register(request);
+        User user = userRepository.findByEmail(request.getEmail()).orElseThrow(() -> new RuntimeException("User not found"));
+        user.setEnabled(true);
+        userRepository.save(user);
+        return mapToUserResponse(user);
+    }
+
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
             .orElseThrow(() -> new RuntimeException("Invalid email or password"));
