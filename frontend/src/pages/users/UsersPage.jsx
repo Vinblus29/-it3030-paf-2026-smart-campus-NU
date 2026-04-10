@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Tag, Space, Modal, message, Card, Tabs, Badge } from 'antd';
-import { UserOutlined, CheckOutlined, CloseOutlined, DeleteOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Table, Button, Tag, Space, Modal, message, Card, Tabs, Badge, Form, Input, Select } from 'antd';
+import { UserOutlined, CheckOutlined, CloseOutlined, DeleteOutlined, EditOutlined, ReloadOutlined, PlusOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
 const UsersPage = () => {
@@ -9,12 +9,31 @@ const UsersPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => {
     fetchUsers();
     fetchPendingUsers();
   }, []);
+
+  const handleCreateUser = async (values) => {
+    setCreating(true);
+    try {
+      await axios.post('/api/admin/users', values);
+      message.success('User created successfully');
+      setCreateModalVisible(false);
+      form.resetFields();
+      fetchUsers();
+    } catch (error) {
+      console.error('Error creating user:', error);
+      message.error(error.response?.data?.message || 'Failed to create user');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -298,12 +317,21 @@ const UsersPage = () => {
             <h1 className="text-2xl font-bold text-gray-800">User Management</h1>
             <p className="text-gray-500">Manage user accounts and approvals</p>
           </div>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => { fetchUsers(); fetchPendingUsers(); }}
-          >
-            Refresh
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setCreateModalVisible(true)}
+            >
+              Add Technician
+            </Button>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => { fetchUsers(); fetchPendingUsers(); }}
+            >
+              Refresh
+            </Button>
+          </div>
         </div>
 
         <Tabs
@@ -312,6 +340,44 @@ const UsersPage = () => {
           items={items}
         />
       </Card>
+
+      <Modal
+        title="Add New User (Technician/Admin)"
+        open={createModalVisible}
+        onCancel={() => {
+          setCreateModalVisible(false);
+          form.resetFields();
+        }}
+        confirmLoading={creating}
+        onOk={() => form.submit()}
+      >
+        <Form form={form} layout="vertical" onFinish={handleCreateUser}>
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item name="firstName" label="First Name" rules={[{ required: true, message: 'Required' }]}>
+              <Input placeholder="John" />
+            </Form.Item>
+            <Form.Item name="lastName" label="Last Name" rules={[{ required: true, message: 'Required' }]}>
+              <Input placeholder="Doe" />
+            </Form.Item>
+          </div>
+          <Form.Item name="email" label="Email Address" rules={[{ required: true, type: 'email', message: 'Valid email required' }]}>
+            <Input placeholder="john.doe@example.com" />
+          </Form.Item>
+          <Form.Item name="password" label="Password" rules={[{ required: true, min: 6, message: 'Min 6 chars expected' }]}>
+            <Input.Password placeholder="Enter initial password" />
+          </Form.Item>
+          <Form.Item name="phoneNumber" label="Phone Number" rules={[{ required: true, message: 'Required' }]}>
+            <Input placeholder="+1234567890" />
+          </Form.Item>
+          <Form.Item name="role" label="Role" initialValue="TECHNICIAN" rules={[{ required: true, message: 'Required' }]}>
+            <Select>
+              <Select.Option value="TECHNICIAN">Technician</Select.Option>
+              <Select.Option value="ADMIN">Admin</Select.Option>
+              <Select.Option value="USER">User</Select.Option>
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

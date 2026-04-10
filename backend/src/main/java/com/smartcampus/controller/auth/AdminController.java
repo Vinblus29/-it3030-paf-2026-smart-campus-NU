@@ -1,8 +1,10 @@
 package com.smartcampus.controller.auth;
 
 import com.smartcampus.dto.auth.UserResponse;
+import com.smartcampus.dto.auth.RegisterRequest;
 import com.smartcampus.dto.notification.CampusAnnouncementDto;
 import com.smartcampus.service.auth.AdminService;
+import com.smartcampus.service.auth.AuthService;
 import com.smartcampus.service.page.AnnouncementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +20,18 @@ public class AdminController {
 
     private final AdminService adminService;
     private final AnnouncementService announcementService;
+    private final AuthService authService;
 
-    public AdminController(AdminService adminService, AnnouncementService announcementService) {
+    public AdminController(AdminService adminService, AnnouncementService announcementService, AuthService authService) {
         this.adminService = adminService;
         this.announcementService = announcementService;
+        this.authService = authService;
+    }
+
+    @PostMapping("/users")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> createUser(@RequestBody RegisterRequest request) {
+        return ResponseEntity.ok(authService.registerAdminCreatedUser(request));
     }
 
     @GetMapping("/users")
