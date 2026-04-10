@@ -63,6 +63,18 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/email/generate-otp")
+    public ResponseEntity<?> generateEmailOtp(@RequestBody OtpGenerateRequest req) {
+        authService.generateOtp(req);
+        return ResponseEntity.ok("OTP sent successfully");
+    }
+
+    @PostMapping("/email/verify-otp")
+    public ResponseEntity<?> verifyEmailOtp(@RequestBody java.util.Map<String, String> req) {
+        authService.verifyPhoneOtp(req.get("email"), req.get("otp"));  // Update with proper email verify when implemented
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getCurrentUser() {
         return ResponseEntity.ok(authService.getCurrentUserResponse());

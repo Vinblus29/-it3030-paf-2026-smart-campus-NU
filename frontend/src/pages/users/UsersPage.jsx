@@ -97,24 +97,7 @@ const UsersPage = () => {
     });
   };
 
-  const handleDelete = async (userId) => {
-    Modal.confirm({
-      title: 'Delete User',
-      content: 'Are you sure you want to delete this user? This action cannot be undone.',
-      okText: 'Yes, Delete',
-      okType: 'danger',
-      cancelText: 'Cancel',
-      onOk: async () => {
-        try {
-          await axios.delete(`/api/admin/users/${userId}`);
-          message.success('User deleted successfully');
-          fetchUsers();
-        } catch (error) {
-          message.error('Failed to delete user');
-        }
-      }
-    });
-  };
+
 
   const getRoleColor = (role) => {
     const colors = {
@@ -196,14 +179,6 @@ const UsersPage = () => {
               Enable
             </Button>
           )}
-          <Button
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.id)}
-          >
-            Delete
-          </Button>
         </Space>
       ),
     },
