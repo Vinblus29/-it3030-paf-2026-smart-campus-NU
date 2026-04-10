@@ -21,22 +21,27 @@ const ProfilePage = () => {
     // Modals States
     const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
     const [isPhoneModalVisible, setIsPhoneModalVisible] = useState(false);
+    const [isEmailModalVisible, setIsEmailModalVisible] = useState(false);
 
     const [passwordStep, setPasswordStep] = useState(0);
     const [phoneStep, setPhoneStep] = useState(0);
+    const [emailStep, setEmailStep] = useState(0);
 
     const [otpLoading, setOtpLoading] = useState(false);
     const [passwordForm] = Form.useForm();
     const [phoneForm] = Form.useForm();
+    const [emailForm] = Form.useForm();
 
     const [passwordCooldown, setPasswordCooldown] = useState(0);
     const [phoneCooldown, setPhoneCooldown] = useState(0);
+    const [emailCooldown, setEmailCooldown] = useState(0);
 
     // Timer logic for cooldowns
     useEffect(() => {
         const timer = setInterval(() => {
             setPasswordCooldown(prev => (prev > 0 ? prev - 1 : 0));
             setPhoneCooldown(prev => (prev > 0 ? prev - 1 : 0));
+            setEmailCooldown(prev => (prev > 0 ? prev - 1 : 0));
         }, 1000);
         return () => clearInterval(timer);
     }, []);
@@ -49,7 +54,8 @@ const ProfilePage = () => {
             form.setFieldsValue({
                 firstName: user.firstName,
                 lastName: user.lastName,
-                phoneNumber: user.phoneNumber
+                phoneNumber: user.phoneNumber,
+                email: user.email
             });
         }
     }, [user, form]);
@@ -186,6 +192,47 @@ const ProfilePage = () => {
         }
     };
 
+    // Email Handlers
+    const handleSendEmailOtp = async () => {
+        const newEmail = emailForm.getFieldValue('newEmail');
+        if (!newEmail) return message.warning('Enter new email first');
+
+        setOtpLoading(true);
+        try {
+            await axios.post('/api/auth/email/generate-otp', { email: newEmail });
+            message.success('Code sent to ' + newEmail);
+            setEmailStep(1);
+            setEmailCooldown(60);
+        } catch (error) {
+            message.error('Failed to send code');
+        } finally {
+            setOtpLoading(false);
+        }
+    };
+
+    const handleEmailVerify = async (values) => {
+        setLoading(true);
+        try {
+            await axios.post('/api/auth/email/verify-otp', {
+                email: values.newEmail,
+                otp: values.otp
+            });
+            message.success('Email updated');
+
+            // Refresh user context
+            const meRes = await axios.get('/api/auth/me');
+            setUser(meRes.data);
+
+            setIsEmailModalVisible(false);
+            setEmailStep(0);
+            emailForm.resetFields();
+        } catch (error) {
+            message.error(error.response?.data || 'Incorrect code');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div style={{ maxWidth: 840, margin: '0 auto', padding: '32px 0' }}>
             <div style={{ marginBottom: 24 }}>
@@ -229,16 +276,22 @@ const ProfilePage = () => {
                             </Form.Item>
                         </div>
 
-                        <Form.Item name="email" label="Email">
-                            <Input prefix={<MailOutlined />} disabled style={{ height: 44, borderRadius: 8, background: '#f8fafc' }} />
-                        </Form.Item>
-
                         <Form.Item name="phoneNumber" label="Phone (requires verification to change)">
                             <Input
                                 prefix={<PhoneOutlined />}
                                 disabled
                                 suffix={<Button type="link" onClick={() => { setIsPhoneModalVisible(true); setPhoneStep(0); }} style={{ padding: 0 }}>Change Number</Button>}
                                 style={{ height: 44, borderRadius: 8, background: '#f8fafc' }}
+                            />
+                        </Form.Item>
+
+                        <Form.Item name="email" label="Email (requires verification to change)">
+                            <Input 
+                                prefix={<MailOutlined />} 
+                                disabled 
+                                value={user?.email}
+                                suffix={<Button type="link" onClick={() => { setIsEmailModalVisible(true); setEmailStep(0); }} style={{ padding: 0 }}>Change Email</Button>}
+                                style={{ height: 44, borderRadius: 8, background: '#f8fafc' }} 
                             />
                         </Form.Item>
 
@@ -332,6 +385,51 @@ const ProfilePage = () => {
                             </Form.Item>
                             <Button type="primary" htmlType="submit" loading={loading} block style={{ background: '#22c55e', border: 'none' }}>Verify & Update Phone</Button>
                             <Button type="link" onClick={() => setPhoneStep(0)} block style={{ marginTop: 8 }}>Change Number</Button>
+                        </>
+                    )}
+                </Form>
+            </Modal>
+
+            {/* Email Modal */}
+            <Modal title="Verify Email Address" open={isEmailModalVisible} footer={null} onCancel={() => setIsEmailModalVisible(false)} centered>
+                <Steps current={emailStep} size="small" style={{ marginBottom: 24 }}>
+                    <Step title="New Email" />
+                    <Step title="Verify" />
+                </Steps>
+                <Form form={emailForm} layout="vertical" onFinish={handleEmailVerify}>
+                    {emailStep === 0 ? (
+                        <>
+                            <Form.Item name="newEmail" label="New Email Address" rules={[{ required: true, type: 'email' }]}>
+                                <Input prefix={<MailOutlined />} placeholder="newemail@example.com" />
+                            </Form.Item>
+                            <Button
+                                type="primary"
+                                onClick={handleSendEmailOtp}
+                                loading={otpLoading}
+                                disabled={emailCooldown > 0}
+                                block
+                                style={{ background: '#0f3460' }}
+                            >
+                                {emailCooldown > 0 ? `Resend Code (${emailCooldown}s)` : 'Send OTP'}
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <p style={{ textAlign: 'center' }}>Verification code sent to <b>{emailForm.getFieldValue('newEmail')}</b></p>
+                            <Button
+                                type="link"
+                                onClick={handleSendEmailOtp}
+                                disabled={otpLoading || emailCooldown > 0}
+                                block
+                                style={{ marginBottom: 16 }}
+                            >
+                                {emailCooldown > 0 ? `Resend in ${emailCooldown}s` : 'Resend Code'}
+                            </Button>
+                            <Form.Item name="otp" label="Code" rules={[{ required: true }]}>
+                                <Input placeholder="123456" maxLength={6} />
+                            </Form.Item>
+                            <Button type="primary" htmlType="submit" loading={loading} block style={{ background: '#22c55e', border: 'none' }}>Verify & Update Email</Button>
+                            <Button type="link" onClick={() => setEmailStep(0)} block style={{ marginTop: 8 }}>Change Email</Button>
                         </>
                     )}
                 </Form>
