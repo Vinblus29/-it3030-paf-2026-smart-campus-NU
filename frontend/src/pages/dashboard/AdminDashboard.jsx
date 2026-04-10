@@ -83,6 +83,7 @@ const AdminDashboard = () => {
   const [recentTickets, setRecentTickets] = useState([]);
   const [bookingStats, setBookingStats] = useState({});
   const [ticketStats, setTicketStats] = useState({});
+  const [systemLogs, setSystemLogs] = useState([]);
   const [broadcastModal, setBroadcastModal] = useState(false);
   const [broadcastData, setBroadcastData] = useState({ title: '', body: '' });
   const [broadcasting, setBroadcasting] = useState(false);
@@ -139,6 +140,56 @@ const AdminDashboard = () => {
       const recentList = await ticketService.getAllTickets();
       setRecentBookings(bookings.slice(0, 5));
       setRecentTickets(recentList.slice(0, 5));
+
+      // Generate dynamic system logs
+      const logs = [];
+      
+      if (Array.isArray(bookings)) {
+        bookings.slice(0, 20).forEach(b => {
+          logs.push({
+            id: `b_${b.id}`,
+            action: b.status === 'PENDING' ? 'New Booking Request' : `Booking ${b.status}`,
+            user: b.userName || b.userEmail || 'User',
+            timeObj: new Date(b.createdAt || b.startTime || Date.now()),
+            color: b.status === 'APPROVED' ? '#52c41a' : b.status === 'REJECTED' ? '#cf1322' : '#f5a623'
+          });
+        });
+      }
+
+      if (Array.isArray(recentList)) {
+        recentList.slice(0, 20).forEach(t => {
+          logs.push({
+            id: `t_${t.id}`,
+            action: t.status === 'RESOLVED' ? 'Ticket Resolved' : t.status === 'OPEN' ? 'New Ticket' : `Ticket ${t.status}`,
+            user: t.reporterName || t.reporterEmail || 'User',
+            timeObj: new Date(t.createdAt || t.updatedAt || Date.now()),
+            color: t.status === 'RESOLVED' ? '#0f3460' : t.status === 'OPEN' ? '#e94560' : '#d46b08'
+          });
+        });
+      }
+
+      logs.sort((a, b) => b.timeObj - a.timeObj);
+
+      const timeAgo = (date) => {
+        const seconds = Math.floor((new Date() - date) / 1000);
+        let interval = seconds / 31536000;
+        if (interval >= 1) return Math.floor(interval) + " years ago";
+        interval = seconds / 2592000;
+        if (interval >= 1) return Math.floor(interval) + " months ago";
+        interval = seconds / 86400;
+        if (interval >= 1) return Math.floor(interval) + " days ago";
+        interval = seconds / 3600;
+        if (interval >= 1) return Math.floor(interval) + " hours ago";
+        interval = seconds / 60;
+        if (interval >= 1) return Math.floor(interval) + " mins ago";
+        return isNaN(seconds) || seconds < 0 ? "just now" : Math.floor(seconds) + " secs ago";
+      };
+
+      setSystemLogs(logs.slice(0, 5).map(log => ({
+        ...log,
+        time: timeAgo(log.timeObj)
+      })));
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       setError('Failed to load dashboard data. Please ensure the backend is running and the database schema is up to date.');
@@ -259,12 +310,6 @@ const AdminDashboard = () => {
     { title: 'Status', dataIndex: 'status', key: 'status', render: s => <StatusBadge status={s} /> },
   ];
 
-  const systemLogs = [
-    { id: 1, action: 'User Approved', user: 'Victor Dev', time: '2 mins ago', color: '#52c41a' },
-    { id: 2, action: 'New Booking', user: 'Sarah J.', time: '15 mins ago', color: '#f5a623' },
-    { id: 3, action: 'Ticket Resolved', user: 'Tech Support', time: '1 hour ago', color: '#0f3460' },
-    { id: 4, action: 'System Update', user: 'Automated', time: '3 hours ago', color: '#8c8c8c' },
-  ];
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}><Spin size="large" /></div>;
 
@@ -398,18 +443,22 @@ const AdminDashboard = () => {
             <SettingOutlined style={{ color: '#8896a4', cursor: 'pointer', fontSize: 14 }} />
           </div>
           <div style={{ padding: '4px 16px', flex: 1 }}>
-            {systemLogs.map(log => (
-              <div key={log.id} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid #f8f8f8' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: log.color, marginTop: 4, flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontWeight: 700, fontSize: 12, color: '#1a1a2e' }}>{log.action}</div>
-                    <div style={{ fontSize: 10, color: '#999' }}>{log.time}</div>
+            {systemLogs.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '20px 0', color: '#999', fontSize: 12 }}>No recent activity</div>
+            ) : (
+              systemLogs.map(log => (
+                <div key={log.id} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid #f8f8f8' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: log.color, marginTop: 4, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontWeight: 700, fontSize: 12, color: '#1a1a2e' }}>{log.action}</div>
+                      <div style={{ fontSize: 10, color: '#999' }}>{log.time}</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>{log.user}</div>
                   </div>
-                  <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>{log.user}</div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
           <div style={{ padding: 12, textAlign: 'center', background: '#fafafa' }}>
             <a href="/logs" style={{ color: '#0f3460', fontSize: 11, fontWeight: 700, textDecoration: 'none' }}>View Detailed Logs</a>
