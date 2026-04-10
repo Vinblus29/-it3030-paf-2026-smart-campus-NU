@@ -73,9 +73,6 @@ const facilityService = {
     return response.data;
   },
 
-  getFacilityQRCodeUrl: (id) => {
-    return `${API_URL}/${id}/qr`;
-  },
 
   getFacilitiesByTags: async (tags) => {
     const response = await axios.get(`${API_URL}/tags`, {
