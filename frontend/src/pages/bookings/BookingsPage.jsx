@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Table, Button, Tag, Space, Modal, message, Card, Select, 
-  Input, Row, Col, Statistic, Typography, Empty 
+  Input, Row, Col, Statistic, Typography, Empty, Tabs, DatePicker 
 } from 'antd';
 import { 
   CheckOutlined, CloseOutlined, EyeOutlined, CalendarOutlined,
@@ -28,6 +28,10 @@ const BookingsPage = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [rejectingId, setRejectingId] = useState(null);
   const [submittingReject, setSubmittingReject] = useState(false);
+
+  // Check-in Logs state
+  const [logFacilityFilter, setLogFacilityFilter] = useState('ALL');
+  const [logDateFilter, setLogDateFilter] = useState(null);
 
   useEffect(() => {
     fetchBookings();
@@ -72,6 +76,34 @@ const BookingsPage = () => {
     setSearchText('');
     setFilterStatus('ALL');
   };
+
+  const checkInLogs = useMemo(() => {
+    return bookings.filter(b => b.checkedIn);
+  }, [bookings]);
+
+  const uniqueFacilities = useMemo(() => {
+    const facilities = new Set();
+    checkInLogs.forEach(b => {
+        if (b.facilityName) facilities.add(b.facilityName);
+    });
+    return Array.from(facilities);
+  }, [checkInLogs]);
+
+  const filteredLogs = useMemo(() => {
+      return checkInLogs.filter(b => {
+          const matchFacility = logFacilityFilter === 'ALL' || b.facilityName === logFacilityFilter;
+          let matchDate = true;
+          if (logDateFilter) {
+             const logTime = b.checkInTime ? new Date(b.checkInTime) : new Date(b.startTime);
+             const year = logTime.getFullYear();
+             const month = String(logTime.getMonth() + 1).padStart(2, '0');
+             const day = String(logTime.getDate()).padStart(2, '0');
+             const checkInDateStr = `${year}-${month}-${day}`;
+             matchDate = checkInDateStr === logDateFilter;
+          }
+          return matchFacility && matchDate;
+      });
+  }, [checkInLogs, logFacilityFilter, logDateFilter]);
 
   const handleApprove = async (id) => {
     try {
@@ -169,8 +201,8 @@ const BookingsPage = () => {
             {record.startTime ? new Date(record.startTime).toLocaleDateString() : '-'}
           </div>
           <div className="text-xs text-gray-500">
-            {record.startTime ? new Date(record.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''} - 
-            {record.endTime ? new Date(record.endTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
+            {record.startTime ? new Date(record.startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'}) : ''} - 
+            {record.endTime ? new Date(record.endTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'}) : ''}
           </div>
         </div>
       ),
@@ -228,6 +260,64 @@ const BookingsPage = () => {
     },
   ];
 
+  const logColumns = [
+    {
+      title: 'Booking ID',
+      dataIndex: 'id',
+      key: 'id',
+      render: (text) => <span className="font-medium text-gray-500">#{text}</span>,
+    },
+    {
+      title: 'Facility',
+      dataIndex: 'facilityName',
+      key: 'facility',
+      render: (text) => <span className="font-semibold text-blue-600">{text || 'N/A'}</span>,
+    },
+    {
+      title: 'User',
+      key: 'user',
+      render: (_, record) => (
+        <div>
+          <div className="font-medium">{record.userName}</div>
+          <div className="text-gray-400 text-xs">{record.userEmail}</div>
+        </div>
+      ),
+    },
+    {
+      title: 'Scheduled Time',
+      key: 'time',
+      render: (_, record) => (
+        <div className="text-sm">
+          {record.startTime ? new Date(record.startTime).toLocaleString('en-US', {month:'short', day:'numeric', hour: '2-digit', minute:'2-digit'}) : '-'} 
+          <br/>
+          to {record.endTime ? new Date(record.endTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'}) : '-'}
+        </div>
+      ),
+    },
+    {
+      title: 'Check-In Time',
+      key: 'checkInTime',
+      render: (_, record) => (
+        <div className="text-green-600 font-bold">
+           {record.checkInTime ? new Date(record.checkInTime).toLocaleString('en-US', {month:'short', day:'numeric', hour: '2-digit', minute:'2-digit'}) : 'Verified'}
+        </div>
+      ),
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_, record) => (
+        <Button 
+          icon={<EyeOutlined />} 
+          size="small"
+          onClick={() => handleView(record)}
+        >
+          View
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <Row gutter={12}>
@@ -253,50 +343,103 @@ const BookingsPage = () => {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-          <Input
-            placeholder="Search facility, user, purpose, ID..."
-            prefix={<SearchOutlined className="text-gray-400" />}
-            value={searchText}
-            onChange={e => setSearchText(e.target.value)}
-            allowClear
-            style={{ width: 300 }}
-          />
-          <Select value={filterStatus} onChange={setFilterStatus} style={{ width: 180 }}>
-            <Option value="ALL">All Statuses</Option>
-            <Option value="PENDING"><Tag color="orange">PENDING</Tag></Option>
-            <Option value="APPROVED"><Tag color="green">APPROVED</Tag></Option>
-            <Option value="REJECTED"><Tag color="red">REJECTED</Tag></Option>
-            <Option value="CANCELLED"><Tag color="default">CANCELLED</Tag></Option>
-          </Select>
-          {(searchText || filterStatus !== 'ALL') && (
-            <Button icon={<ClearOutlined />} onClick={clearFilters}>Clear</Button>
-          )}
-          {(searchText || filterStatus !== 'ALL') && (
-            <Text type="secondary" className="self-center text-sm">
-              {filteredBookings.length} of {bookings.length} total bookings
-            </Text>
-          )}
-        </div>
+        <Tabs defaultActiveKey="1">
+          <Tabs.TabPane tab="Booking Requests" key="1">
+            <div className="flex flex-wrap gap-3 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100 mt-2">
+              <Input
+                placeholder="Search facility, user, purpose, ID..."
+                prefix={<SearchOutlined className="text-gray-400" />}
+                value={searchText}
+                onChange={e => setSearchText(e.target.value)}
+                allowClear
+                style={{ width: 300 }}
+              />
+              <Select value={filterStatus} onChange={setFilterStatus} style={{ width: 180 }}>
+                <Option value="ALL">All Statuses</Option>
+                <Option value="PENDING"><Tag color="orange">PENDING</Tag></Option>
+                <Option value="APPROVED"><Tag color="green">APPROVED</Tag></Option>
+                <Option value="REJECTED"><Tag color="red">REJECTED</Tag></Option>
+                <Option value="CANCELLED"><Tag color="default">CANCELLED</Tag></Option>
+              </Select>
+              {(searchText || filterStatus !== 'ALL') && (
+                <Button icon={<ClearOutlined />} onClick={clearFilters}>Clear</Button>
+              )}
+              {(searchText || filterStatus !== 'ALL') && (
+                <Text type="secondary" className="self-center text-sm">
+                  {filteredBookings.length} of {bookings.length} total bookings
+                </Text>
+              )}
+            </div>
 
-        {bookings.length > 0 ? (
-          <Table 
-            columns={columns}
-            dataSource={filteredBookings}
-            rowKey="id"
-            loading={loading}
-            pagination={{ pageSize: 10, showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} bookings` }}
-            locale={{
-              emptyText: (searchText || filterStatus !== 'ALL')
-                ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No bookings match your administration filters">
-                    <Button onClick={clearFilters}>Clear Filters</Button>
-                  </Empty>
-                : 'No bookings records found'
-            }}
-          />
-        ) : !loading && (
-          <Empty description="No booking requests have been submitted yet" />
-        )}
+            {bookings.length > 0 ? (
+              <Table 
+                columns={columns}
+                dataSource={filteredBookings}
+                rowKey="id"
+                loading={loading}
+                pagination={{ pageSize: 10, showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} bookings` }}
+                locale={{
+                  emptyText: (searchText || filterStatus !== 'ALL')
+                    ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No bookings match your administration filters">
+                        <Button onClick={clearFilters}>Clear Filters</Button>
+                      </Empty>
+                    : 'No bookings records found'
+                }}
+              />
+            ) : !loading && (
+              <Empty description="No booking requests have been submitted yet" />
+            )}
+          </Tabs.TabPane>
+
+          <Tabs.TabPane tab="Check-in Logs" key="2">
+             <div className="flex flex-wrap gap-3 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100 mt-2">
+               <div className="flex items-center gap-2">
+                  <span className="font-medium text-blue-800">Filter by Facility:</span>
+                  <Select 
+                    value={logFacilityFilter} 
+                    onChange={setLogFacilityFilter} 
+                    style={{ width: 250 }}
+                    showSearch
+                  >
+                    <Option value="ALL">All Facilities</Option>
+                    {uniqueFacilities.map(facility => (
+                       <Option key={facility} value={facility}>{facility}</Option>
+                    ))}
+                  </Select>
+               </div>
+               <div className="flex items-center gap-2 ml-2">
+                  <span className="font-medium text-blue-800">Date:</span>
+                  <DatePicker 
+                    key={logDateFilter || 'cleared'}
+                    onChange={(date, dateString) => setLogDateFilter(dateString)}
+                    style={{ width: 150 }}
+                    allowClear
+                  />
+               </div>
+               {(logFacilityFilter !== 'ALL' || logDateFilter) && (
+                 <Button icon={<ClearOutlined />} onClick={() => { setLogFacilityFilter('ALL'); setLogDateFilter(null); }}>Clear</Button>
+               )}
+               <Text type="secondary" className="self-center text-sm ml-auto">
+                 Showing {filteredLogs.length} Check-in Record(s)
+               </Text>
+             </div>
+
+             <Table 
+                columns={logColumns}
+                dataSource={filteredLogs}
+                rowKey="id"
+                loading={loading}
+                pagination={{ pageSize: 10, showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} records` }}
+                locale={{
+                  emptyText: logFacilityFilter !== 'ALL'
+                    ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={`No check-in records found for ${logFacilityFilter}`}>
+                        <Button onClick={() => setLogFacilityFilter('ALL')}>Clear Filter</Button>
+                      </Empty>
+                    : 'No check-in records have been captured yet'
+                }}
+              />
+          </Tabs.TabPane>
+        </Tabs>
       </Card>
 
       {/* View Booking Modal */}
@@ -344,7 +487,7 @@ const BookingsPage = () => {
               <div className="flex items-center gap-2">
                 <CalendarOutlined />
                 <span className="font-medium">
-                  {new Date(selectedBooking.startTime).toLocaleString()} - {new Date(selectedBooking.endTime).toLocaleTimeString()}
+                  {new Date(selectedBooking.startTime).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, month: 'short', day: 'numeric', year: 'numeric' })} - {new Date(selectedBooking.endTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                 </span>
               </div>
             </div>

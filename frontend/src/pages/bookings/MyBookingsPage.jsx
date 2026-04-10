@@ -138,8 +138,8 @@ const MyBookingsPage = () => {
         <div> 
           <div className="font-medium">{record.startTime ? new Date(record.startTime).toLocaleDateString() : '-'}</div>
           <div className="text-xs text-gray-500">
-            {record.startTime ? new Date(record.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''} - 
-            {record.endTime ? new Date(record.endTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
+            {record.startTime ? new Date(record.startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'}) : ''} - 
+            {record.endTime ? new Date(record.endTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'}) : ''}
           </div>
         </div>
       ),
@@ -328,13 +328,15 @@ const MyBookingsPage = () => {
                       month: 'long', 
                       day: 'numeric',
                       hour: '2-digit',
-                      minute: '2-digit'
+                      minute: '2-digit',
+                      hour12: true
                     })}
                   </p>
                   <p className="text-sm text-gray-500">
                     to {new Date(selectedBooking.endTime).toLocaleTimeString('en-US', { 
                       hour: '2-digit', 
-                      minute: '2-digit'
+                      minute: '2-digit',
+                      hour12: true
                     })}
                   </p>
                 </div>

@@ -142,6 +142,14 @@ public class BookingService {
         booking.setCreatedAt(LocalDateTime.now());
 
         booking = bookingRepository.save(booking);
+
+        createNotification(booking.getUser(), "Booking Submitted",
+            "Your booking request for " + booking.getFacility().getName() + " has been submitted and is pending approval.", "BOOKING");
+        
+        pushNotificationService.sendToUser(booking.getUser(),
+            "📋 Booking Submitted",
+            "Your booking for " + booking.getFacility().getName() + " is pending approval.");
+
         return mapToDTO(booking);
     }
 
@@ -180,9 +188,26 @@ public class BookingService {
                 case "DAILY": currentStart = currentStart.plusDays(1); currentEnd = currentEnd.plusDays(1); break;
                 case "WEEKLY": currentStart = currentStart.plusWeeks(1); currentEnd = currentEnd.plusWeeks(1); break;
                 case "MONTHLY": currentStart = currentStart.plusMonths(1); currentEnd = currentEnd.plusMonths(1); break;
-                default: return mapToDTO(firstBooking);
+                default: 
+                    if (firstBooking != null) {
+                        createNotification(user, "Recurring Bookings Submitted",
+                            "Your recurring bookings for " + facility.getName() + " have been submitted.", "BOOKING");
+                        pushNotificationService.sendToUser(user,
+                            "📋 Recurring Bookings",
+                            "Your recurring bookings for " + facility.getName() + " are pending.");
+                    }
+                    return mapToDTO(firstBooking);
             }
         }
+        
+        if (firstBooking != null) {
+            createNotification(user, "Recurring Bookings Submitted",
+                "Your recurring bookings for " + facility.getName() + " have been submitted.", "BOOKING");
+            pushNotificationService.sendToUser(user,
+                "📋 Recurring Bookings",
+                "Your recurring bookings for " + facility.getName() + " are pending.");
+        }
+        
         return mapToDTO(firstBooking);
     }
 
@@ -193,6 +218,13 @@ public class BookingService {
         
         BookingWaitlist waitlist = new BookingWaitlist(user, facility, start, end, position);
         bookingWaitlistRepository.save(waitlist);
+
+        createNotification(user, "Added to Waitlist",
+            "You have been added to the waitlist for " + facility.getName() + " at position " + position + ".", "BOOKING");
+            
+        pushNotificationService.sendToUser(user,
+            "⏳ Waitlisted",
+            "Added to waitlist for " + facility.getName() + " (Position: " + position + ").");
     }
 
     private String suggestAlternativeSlots(Long facilityId, LocalDateTime date, int durationMinutes) {
@@ -304,6 +336,13 @@ public class BookingService {
 
         booking = bookingRepository.save(booking);
 
+        createNotification(booking.getUser(), "Booking Cancelled",
+            "Your booking for " + booking.getFacility().getName() + " has been cancelled.", "BOOKING");
+            
+        pushNotificationService.sendToUser(booking.getUser(),
+            "🚫 Booking Cancelled",
+            "Your booking for " + booking.getFacility().getName() + " has been cancelled.");
+
         // Feature 3: Auto-promote waitlisted booking if approved booking gets cancelled
         promoteFromWaitlist(booking.getFacility(), booking.getStartTime(), booking.getEndTime());
 
@@ -332,6 +371,10 @@ public class BookingService {
             // Send notification to the promoted user
             createNotification(first.getUser(), "Waitlist Promotion", 
                 "A slot has opened up for " + facility.getName() + ". Your booking is now pending approval.", "BOOKING");
+            
+            pushNotificationService.sendToUser(first.getUser(),
+                "🎉 Waitlist Promotion",
+                "A slot opened for " + facility.getName() + ". Your booking is now pending.");
             
             // Remove from waitlist
             bookingWaitlistRepository.delete(first);
@@ -370,6 +413,10 @@ public class BookingService {
         // Send notification
         createNotification(booking.getUser(), "Checked In Successfully", 
             "You have successfully checked in for your booking at " + booking.getFacility().getName(), "BOOKING");
+            
+        pushNotificationService.sendToUser(booking.getUser(),
+            "📍 Checked In",
+            "You have successfully checked in at " + booking.getFacility().getName());
 
         return mapToDTO(booking);
     }

@@ -13,13 +13,23 @@ const facilityService = {
     return response.data;
   },
 
-  createFacility: async (facilityData) => {
-    const response = await axios.post(API_URL, facilityData);
+  createFacility: async (facilityData, image) => {
+    const formData = new FormData();
+    formData.append('facility', JSON.stringify(facilityData));
+    if (image) {
+      formData.append('image', image);
+    }
+    const response = await axios.post(API_URL, formData);
     return response.data;
   },
 
-  updateFacility: async (id, facilityData) => {
-    const response = await axios.put(`${API_URL}/${id}`, facilityData);
+  updateFacility: async (id, facilityData, image) => {
+    const formData = new FormData();
+    formData.append('facility', JSON.stringify(facilityData));
+    if (image) {
+      formData.append('image', image);
+    }
+    const response = await axios.put(`${API_URL}/${id}`, formData);
     return response.data;
   },
 
