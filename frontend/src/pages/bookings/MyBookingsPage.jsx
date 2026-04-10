@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'; 
 import { 
   Card, Table, Button, Tag, Space, Modal, message, Empty, 
-  Row, Col, Statistic, Input, Select, Typography 
+  Row, Col, Statistic, Input, Select, Typography, Alert, Spin 
 } from 'antd'; 
 import { 
   PlusOutlined, EyeOutlined, CloseOutlined, CalendarOutlined, 
@@ -18,6 +18,7 @@ const MyBookingsPage = () => {
   const [bookings, setBookings] = useState([]); 
   const [allBookings, setAllBookings] = useState([]); 
   const [loading, setLoading] = useState(true); 
+  const [fetchError, setFetchError] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null); 
   const [viewModalVisible, setViewModalVisible] = useState(false); 
   const [qrModalVisible, setQrModalVisible] = useState(false);
@@ -32,13 +33,14 @@ const MyBookingsPage = () => {
 
   const fetchBookings = async () => { 
     try { 
-      setLoading(true); 
+      setLoading(true);
+      setFetchError(null);
       const data = await bookingService.getMyBookings(); 
       setBookings(data); 
       setAllBookings(data);
     } catch (error) { 
-      console.error('Error fetching bookings:', error); 
-      message.error('Failed to fetch bookings'); 
+      console.error('Error fetching bookings:', error);
+      setFetchError('Unable to load your bookings. Please check your connection and try again.');
     } finally { 
       setLoading(false); 
     } 
@@ -191,7 +193,26 @@ const MyBookingsPage = () => {
   ]; 
 
   return ( 
-    <div className="space-y-4"> 
+    <div className="space-y-4">
+
+      {/* Inline error alert — no popup */}
+      {fetchError && (
+        <Alert
+          message="Failed to Load Bookings"
+          description={fetchError}
+          type="error"
+          showIcon
+          closable
+          onClose={() => setFetchError(null)}
+          action={
+            <Button size="small" danger onClick={fetchBookings}>
+              Retry
+            </Button>
+          }
+          className="rounded-xl"
+        />
+      )}
+
       <Row gutter={12}>
         {[
           { label: 'Total', value: stats.total, color: '#1677ff' },
@@ -250,12 +271,17 @@ const MyBookingsPage = () => {
           )}
         </div>
 
-        {bookings.length > 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <Spin size="large" />
+            <p className="animate-pulse text-indigo-500 text-base font-medium">Loading your bookings...</p>
+          </div>
+        ) : bookings.length > 0 ? (
           <Table 
             columns={columns}
             dataSource={filteredBookings}
             rowKey="id"
-            loading={loading}
+            loading={false}
             pagination={{ pageSize: 8, showTotal: total => `${total} bookings` }}
             className="booking-history-table"
             locale={{
@@ -266,7 +292,7 @@ const MyBookingsPage = () => {
                 : 'No bookings yet'
             }}
           />
-        ) : !loading && (
+        ) : !fetchError && (
           <Empty 
             description={
               <div className="text-center">
