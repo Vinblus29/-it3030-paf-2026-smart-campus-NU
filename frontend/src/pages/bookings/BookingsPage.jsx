@@ -169,8 +169,8 @@ const BookingsPage = () => {
             {record.startTime ? new Date(record.startTime).toLocaleDateString() : '-'}
           </div>
           <div className="text-xs text-gray-500">
-            {record.startTime ? new Date(record.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''} - 
-            {record.endTime ? new Date(record.endTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
+            {record.startTime ? new Date(record.startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'}) : ''} - 
+            {record.endTime ? new Date(record.endTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'}) : ''}
           </div>
         </div>
       ),
@@ -344,7 +344,7 @@ const BookingsPage = () => {
               <div className="flex items-center gap-2">
                 <CalendarOutlined />
                 <span className="font-medium">
-                  {new Date(selectedBooking.startTime).toLocaleString()} - {new Date(selectedBooking.endTime).toLocaleTimeString()}
+                  {new Date(selectedBooking.startTime).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, month: 'short', day: 'numeric', year: 'numeric' })} - {new Date(selectedBooking.endTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                 </span>
               </div>
             </div>

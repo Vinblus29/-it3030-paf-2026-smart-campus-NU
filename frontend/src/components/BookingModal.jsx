@@ -56,8 +56,11 @@ const BookingModal = ({ visible, facility, onCancel, onSuccess }) => {
           rules={[{ required: true, message: 'Please select date and time range' }]}
         >
           <RangePicker 
-            showTime 
-            format="YYYY-MM-DD HH:mm" 
+            showTime={{
+              format: 'hh:mm A',
+              use12Hours: true,
+            }}
+            format="YYYY-MM-DD hh:mm A" 
             className="w-full"
             disabledDate={(current) => current && current < dayjs().startOf('day')}
           />
