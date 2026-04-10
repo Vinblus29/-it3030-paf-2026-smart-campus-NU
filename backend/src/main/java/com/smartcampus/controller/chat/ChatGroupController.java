@@ -19,11 +19,15 @@ public class ChatGroupController {
     private final ChatGroupRepository groupRepository;
     private final UserRepository userRepository;
     private final com.smartcampus.service.auth.AuthService authService;
+    private final com.smartcampus.service.chat.ChatService chatService;
 
-    public ChatGroupController(ChatGroupRepository groupRepository, UserRepository userRepository, com.smartcampus.service.auth.AuthService authService) {
+    public ChatGroupController(ChatGroupRepository groupRepository, UserRepository userRepository, 
+                               com.smartcampus.service.auth.AuthService authService,
+                               com.smartcampus.service.chat.ChatService chatService) {
         this.groupRepository = groupRepository;
         this.userRepository = userRepository;
         this.authService = authService;
+        this.chatService = chatService;
     }
 
 
@@ -48,8 +52,7 @@ public class ChatGroupController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ChatGroupDto> createGroup(@RequestBody ChatGroupDto request) {
-        ChatGroup group = new ChatGroup(request.getName(), request.getDescription(), request.isBroadcastOnly());
-        return ResponseEntity.ok(mapToDto(groupRepository.save(group)));
+        return ResponseEntity.ok(chatService.createGroup(request));
     }
 
     private ChatGroupDto mapToDto(ChatGroup g) {

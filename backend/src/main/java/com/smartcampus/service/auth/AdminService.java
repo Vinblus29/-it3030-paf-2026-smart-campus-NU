@@ -15,9 +15,12 @@ import java.util.stream.Collectors;
 public class AdminService {
 
     private final UserRepository userRepository;
+    private final com.smartcampus.service.notification.PushNotificationService pushNotificationService;
 
-    public AdminService(UserRepository userRepository) {
+    public AdminService(UserRepository userRepository,
+                        com.smartcampus.service.notification.PushNotificationService pushNotificationService) {
         this.userRepository = userRepository;
+        this.pushNotificationService = pushNotificationService;
     }
 
     public List<UserResponse> getAllUsers() {
@@ -68,6 +71,15 @@ public class AdminService {
         
         user.setEnabled(true);
         userRepository.save(user);
+
+        // Push notification to the newly approved user
+        try {
+            pushNotificationService.sendToUser(user,
+                "🎉 Account Approved!",
+                "Welcome to Smart Campus! Your account has been approved. You can now access all features.");
+        } catch (Exception e) {
+            System.err.println("[Push] Approval push failed: " + e.getMessage());
+        }
         
         return mapToUserResponse(user);
     }

@@ -5,6 +5,7 @@ import com.smartcampus.dto.ticket.TicketResponse;
 import com.smartcampus.dto.ticket.UpdateStatusRequest;
 import com.smartcampus.entity.Ticket;
 import com.smartcampus.repository.TicketRepository;
+import com.smartcampus.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -14,10 +15,17 @@ public class TicketService {
 
     private final TicketRepository repository;
     private final com.smartcampus.service.auth.AuthService authService;
+    private final UserRepository userRepository;
+    private final com.smartcampus.service.notification.PushNotificationService pushNotificationService;
 
-    public TicketService(TicketRepository repository, com.smartcampus.service.auth.AuthService authService) {
+    public TicketService(TicketRepository repository,
+                         com.smartcampus.service.auth.AuthService authService,
+                         UserRepository userRepository,
+                         com.smartcampus.service.notification.PushNotificationService pushNotificationService) {
         this.repository = repository;
         this.authService = authService;
+        this.userRepository = userRepository;
+        this.pushNotificationService = pushNotificationService;
     }
 
     public TicketResponse createTicket(TicketRequest request) {
@@ -54,7 +62,23 @@ public class TicketService {
         ticket.setStatus(request.getStatus());
         ticket.setResolutionNotes(request.getResolutionNotes());
 
-        return toResponse(repository.save(ticket));
+        Ticket saved = repository.save(ticket);
+
+        // Push notification to the reporter (if they are a registered user)
+        try {
+            if (saved.getReportedBy() != null) {
+                userRepository.findByEmail(saved.getReportedBy()).ifPresent(user -> {
+                    String statusLabel = saved.getStatus() != null ? saved.getStatus().name() : "Updated";
+                    pushNotificationService.sendToUser(user,
+                        "🎫 Ticket " + statusLabel,
+                        "Your ticket '" + saved.getTitle() + "' status changed to " + statusLabel);
+                });
+            }
+        } catch (Exception e) {
+            System.err.println("[Push] Ticket status push failed: " + e.getMessage());
+        }
+
+        return toResponse(saved);
     }
 
 

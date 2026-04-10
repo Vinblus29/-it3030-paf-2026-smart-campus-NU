@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import NotificationPrompt from '../components/NotificationPrompt';
 
 const DashboardLayout = () => {
   return (
@@ -8,6 +9,7 @@ const DashboardLayout = () => {
       <main style={{ flex: 1, padding: '24px 24px', maxWidth: 1400, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
         <Outlet />
       </main>
+      <NotificationPrompt />
     </div>
   );
 };

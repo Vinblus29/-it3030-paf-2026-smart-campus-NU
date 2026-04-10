@@ -50,10 +50,19 @@ const Navbar = () => {
   useEffect(() => {
     if (isAuthenticated) {
       fetchUnreadCount();
-      const id = setInterval(fetchUnreadCount, 30000);
+      const id = setInterval(fetchUnreadCount, 5000);
       return () => clearInterval(id);
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    const handleNotificationsUpdated = () => {
+      fetchUnreadCount();
+    };
+    
+    window.addEventListener('notifications-updated', handleNotificationsUpdated);
+    return () => window.removeEventListener('notifications-updated', handleNotificationsUpdated);
+  }, []);
 
   useEffect(() => {
     const handler = (e) => {
@@ -156,14 +165,14 @@ const Navbar = () => {
               <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
-              {unreadCount > 0 && (
+  {unreadCount > 0 && (
                 <span style={{
                   position: 'absolute', top: 4, right: 4,
                   background: '#e94560', color: '#fff',
                   fontSize: 9, fontWeight: 700, lineHeight: 1,
                   padding: '2px 4px', borderRadius: 8, minWidth: 16, textAlign: 'center',
                 }}>
-                  {unreadCount > 9 ? '9+' : unreadCount}
+                  {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
             </Link>
