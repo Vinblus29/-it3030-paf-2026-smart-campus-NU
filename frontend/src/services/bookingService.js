@@ -78,6 +78,14 @@ const bookingService = {
   checkInBooking: async (id) => {
     const response = await axios.put(`${API_URL}/${id}/check-in`);
     return response.data;
+  },
+
+  // Bug #7 Fix: Token-based check-in using UUID token from QR code
+  checkInByToken: async (token) => {
+    const response = await axios.post(`${API_URL}/check-in/token`, null, {
+      params: { token }
+    });
+    return response.data;
   }
 }; 
 

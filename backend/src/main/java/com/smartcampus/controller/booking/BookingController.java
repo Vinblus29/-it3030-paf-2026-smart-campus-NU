@@ -28,8 +28,11 @@ public class BookingController {
 
     @GetMapping("/{id}/qr")
     public ResponseEntity<String> getBookingQR(@PathVariable Long id) {
-        // Generating a QR code with the booking ID or a unique verification URL
-        String checkInUrl = "CHECKIN:" + id; 
+        // Bug #7 Fix: Use the booking's qrToken UUID (not plain ID) for security
+        // This aligns with the checkInByToken endpoint which expects a UUID token
+        BookingDTO booking = bookingService.getBookingById(id);
+        String token = booking.getQrToken() != null ? booking.getQrToken() : String.valueOf(id);
+        String checkInUrl = "CHECKIN:" + token;
         String qrCode = qrService.generateQRCode(checkInUrl, 300, 300);
         return ResponseEntity.ok(qrCode);
     }

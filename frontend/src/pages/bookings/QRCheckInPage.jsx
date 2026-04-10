@@ -36,11 +36,12 @@ const QRCheckInPage = () => {
   const onScanSuccess = async (decodedText) => {
     if (status !== 'scanning') return;
     
-    // Format expected: "CHECKIN:ID"
+    // Bug #7 Fix: QR now carries a UUID token (e.g. "CHECKIN:<uuid>")
+    // Call checkInByToken which validates the secure UUID instead of plain booking ID
     if (decodedText.startsWith('CHECKIN:')) {
-      const bookingId = decodedText.split(':')[1];
+      const token = decodedText.split(':')[1];
       setStatus('processing');
-      await handleCheckIn(bookingId);
+      await handleCheckIn(token);
     } else {
       message.error('Invalid QR code format');
     }
@@ -50,10 +51,11 @@ const QRCheckInPage = () => {
     // console.warn(`Code scan error = ${error}`);
   };
 
-  const handleCheckIn = async (bookingId) => {
+  const handleCheckIn = async (token) => {
     try {
       setLoading(true);
-      const data = await bookingService.checkInBooking(bookingId);
+      // Bug #7 Fix: Use token-based check-in (UUID) instead of ID-based for security
+      const data = await bookingService.checkInByToken(token);
       setBookingData(data);
       setStatus('success');
       message.success('Check-in successful!');

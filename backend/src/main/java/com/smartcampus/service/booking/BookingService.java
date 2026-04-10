@@ -257,11 +257,13 @@ public class BookingService {
             throw new RuntimeException("Only pending bookings can be approved");
         }
 
-        // Check for conflicts with APPROVED bookings again to be sure
+        // Bug #5 Fix: Use same 15-min buffer as createBooking for consistency
+        LocalDateTime bufferedStart = booking.getStartTime().minusMinutes(15);
+        LocalDateTime bufferedEnd = booking.getEndTime().plusMinutes(15);
         List<Booking> conflicts = bookingRepository.findConflictingBookings(
             booking.getFacility().getId(),
-            booking.getStartTime(),
-            booking.getEndTime()
+            bufferedStart,
+            bufferedEnd
         );
 
         if (!conflicts.isEmpty()) {
@@ -343,7 +345,7 @@ public class BookingService {
             "🚫 Booking Cancelled",
             "Your booking for " + booking.getFacility().getName() + " has been cancelled.");
 
-        // Feature 3: Auto-promote waitlisted booking if approved booking gets cancelled
+        // Bug #8 Fix: Promote from waitlist on ANY cancellation (PENDING or APPROVED)
         promoteFromWaitlist(booking.getFacility(), booking.getStartTime(), booking.getEndTime());
 
         return mapToDTO(booking);
@@ -383,9 +385,9 @@ public class BookingService {
 
     @Transactional
     public BookingDTO checkInByToken(String token) {
-        Booking booking = bookingRepository.findAll().stream()
-            .filter(b -> token.equals(b.getQrToken()) && "APPROVED".equals(b.getStatus()))
-            .findFirst()
+        // Bug #2 Fix: Use direct DB lookup instead of O(n) full table scan
+        Booking booking = bookingRepository.findByQrToken(token)
+            .filter(b -> "APPROVED".equals(b.getStatus()))
             .orElseThrow(() -> new RuntimeException("Invalid QR Token or booking not approved"));
 
         return checkIn(booking.getId());

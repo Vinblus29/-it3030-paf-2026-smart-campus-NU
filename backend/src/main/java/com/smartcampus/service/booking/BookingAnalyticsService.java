@@ -20,9 +20,9 @@ public class BookingAnalyticsService {
     public Map<String, Object> getBookingAnalytics(LocalDateTime from, LocalDateTime to) {
         List<Booking> allBookings = bookingRepository.findAll();
         
-        // Filter by date range if provided
+        // Bug #3 Fix: Skip bookings with null createdAt to avoid NullPointerException
         List<Booking> bookings = allBookings.stream()
-            .filter(b -> b.getCreatedAt().isAfter(from) && b.getCreatedAt().isBefore(to))
+            .filter(b -> b.getCreatedAt() != null && b.getCreatedAt().isAfter(from) && b.getCreatedAt().isBefore(to))
             .collect(Collectors.toList());
 
         Map<String, Object> analytics = new HashMap<>();
@@ -42,12 +42,17 @@ public class BookingAnalyticsService {
         analytics.put("approvalRate", approvalRate);
 
         // Most Booked Resources
+        // Bug #11 Fix: Use merge function (Long::sum) to handle duplicate facility names
         Map<String, Long> resourceRank = bookings.stream()
             .collect(Collectors.groupingBy(b -> b.getFacility().getName(), Collectors.counting()));
         analytics.put("mostBookedResources", resourceRank.entrySet().stream()
             .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
             .limit(5)
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue,
+                (a, b) -> a + b,
+                java.util.LinkedHashMap::new)));
 
         // Peak Hours Heatmap (Hour of Day)
         Map<Integer, Long> hourFrequency = bookings.stream()
