@@ -14,10 +14,12 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final AuthService authService;
+    private final com.smartcampus.repository.UserRepository userRepository;
 
-    public NotificationService(NotificationRepository notificationRepository, AuthService authService) {
+    public NotificationService(NotificationRepository notificationRepository, AuthService authService, com.smartcampus.repository.UserRepository userRepository) {
         this.notificationRepository = notificationRepository;
         this.authService = authService;
+        this.userRepository = userRepository;
     }
 
     public List<NotificationDTO> getUserNotifications() {
@@ -57,6 +59,17 @@ public class NotificationService {
             notification.setRead(true);
         }
         
+        notificationRepository.saveAll(notifications);
+    }
+
+    public void notifyAllUsers(String title, String message, String type, String referenceType, Long referenceId) {
+        List<com.smartcampus.model.User> allUsers = userRepository.findAll();
+        List<Notification> notifications = allUsers.stream().map(user -> {
+            Notification n = new Notification(user, title, message, type);
+            n.setReferenceType(referenceType);
+            n.setReferenceId(referenceId);
+            return n;
+        }).collect(Collectors.toList());
         notificationRepository.saveAll(notifications);
     }
 
