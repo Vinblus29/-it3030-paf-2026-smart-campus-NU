@@ -1,8 +1,12 @@
 package com.smartcampus.controller.auth;
 
 import com.smartcampus.dto.auth.UserResponse;
+import com.smartcampus.dto.notification.CampusAnnouncementDto;
 import com.smartcampus.service.auth.AdminService;
+import com.smartcampus.service.page.AnnouncementService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,9 +17,11 @@ import java.util.Map;
 public class AdminController {
 
     private final AdminService adminService;
+    private final AnnouncementService announcementService;
 
-    public AdminController(AdminService adminService) {
+    public AdminController(AdminService adminService, AnnouncementService announcementService) {
         this.adminService = adminService;
+        this.announcementService = announcementService;
     }
 
     @GetMapping("/users")
@@ -79,6 +85,53 @@ public class AdminController {
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getStats() {
         return ResponseEntity.ok(adminService.getUserStats());
+    }
+
+    // ─── Campus Announcements ─────────────────────────────────────────────────
+    
+    @GetMapping("/announcements")
+    public ResponseEntity<List<CampusAnnouncementDto>> getAnnouncements() {
+        return ResponseEntity.ok(announcementService.getAllAnnouncements());
+    }
+
+    @GetMapping("/announcements/recent")
+    public ResponseEntity<List<CampusAnnouncementDto>> getRecentAnnouncements() {
+        return ResponseEntity.ok(announcementService.getRecentAnnouncements());
+    }
+
+@PostMapping("/announcements")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CampusAnnouncementDto> createAnnouncement(@RequestBody Map<String, String> payload) {
+        if (!payload.containsKey("title") || !payload.containsKey("content")) {
+            throw new IllegalArgumentException("Title and content are required");
+        }
+        String title = payload.get("title").trim();
+        String content = payload.get("content").trim();
+        if (title.isEmpty() || content.isEmpty()) {
+            throw new IllegalArgumentException("Title and content cannot be empty");
+        }
+        return ResponseEntity.ok(announcementService.createAnnouncement(title, content));
+    }
+
+@PutMapping("/announcements/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CampusAnnouncementDto> updateAnnouncement(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+        if (!payload.containsKey("title") || !payload.containsKey("content")) {
+            throw new IllegalArgumentException("Title and content are required");
+        }
+        String title = payload.get("title").trim();
+        String content = payload.get("content").trim();
+        if (title.isEmpty() || content.isEmpty()) {
+            throw new IllegalArgumentException("Title and content cannot be empty");
+        }
+        return ResponseEntity.ok(announcementService.updateAnnouncement(id, title, content));
+    }
+
+    @DeleteMapping("/announcements/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteAnnouncement(@PathVariable Long id) {
+        announcementService.deleteAnnouncement(id);
+        return ResponseEntity.ok().build();
     }
 }
 

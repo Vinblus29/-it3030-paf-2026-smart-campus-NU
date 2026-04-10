@@ -5,6 +5,7 @@ import com.smartcampus.security.JwtAuthenticationFilter;
 import com.smartcampus.security.OAuth2AuthenticationSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -60,6 +61,8 @@ public class SecurityConfig {
                 .requestMatchers("/webjars/**").permitAll()
                 .requestMatchers("/swagger-resources/**").permitAll()
                 .requestMatchers("/ws-chat/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/admin/announcements").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/admin/announcements/recent").authenticated()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/technician/**").hasRole("TECHNICIAN")
                 .requestMatchers("/api/chat/**").authenticated()
