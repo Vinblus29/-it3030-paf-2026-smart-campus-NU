@@ -75,6 +75,7 @@ const AdminDashboard = () => {
     totalTickets: 0, pendingTickets: 0, totalUsers: 0, pendingUsers: 0, enabledUsers: 0
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [recentBookings, setRecentBookings] = useState([]);
   const [recentTickets, setRecentTickets] = useState([]);
   const [bookingStats, setBookingStats] = useState({});
@@ -87,42 +88,52 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [facilitiesRes, bookingsRes, ticketsRes, userStats] = await Promise.all([
+      const [facilitiesRes, bookingsRes, ticketStatsData, userStats] = await Promise.all([
         facilityService.getAllFacilities(),
         bookingService.getAllBookings(),
-        ticketService.getAllTickets(),
+        ticketService.getStats(),       // #1 — use stats endpoint
         axios.get('/api/admin/stats')
       ]);
       const facilities = Array.isArray(facilitiesRes) ? facilitiesRes : (facilitiesRes?.content ?? []);
       const bookings = Array.isArray(bookingsRes) ? bookingsRes : (bookingsRes?.content ?? []);
-      const tickets = Array.isArray(ticketsRes) ? ticketsRes : (ticketsRes?.content ?? []);
 
-      setBookingStats({
+      const pendingBookings = bookings.filter(b => b.status === 'PENDING');
+
+      const bookingByStatus = {
         APPROVED: bookings.filter(b => b.status === 'APPROVED').length,
         PENDING: bookings.filter(b => b.status === 'PENDING').length,
         REJECTED: bookings.filter(b => b.status === 'REJECTED').length,
         CANCELLED: bookings.filter(b => b.status === 'CANCELLED').length,
-      });
-      setTicketStats({
-        OPEN: tickets.filter(t => t.status === 'OPEN').length,
-        IN_PROGRESS: tickets.filter(t => t.status === 'IN_PROGRESS').length,
-        RESOLVED: tickets.filter(t => t.status === 'RESOLVED').length,
-        CLOSED: tickets.filter(t => t.status === 'CLOSED').length,
-      });
+      };
+
+      const ticketByStatus = {
+        OPEN: ticketStatsData.open || 0,
+        IN_PROGRESS: ticketStatsData.inProgress || 0,
+        RESOLVED: ticketStatsData.resolved || 0,
+        CLOSED: ticketStatsData.closed || 0,
+      };
+
+      setBookingStats(bookingByStatus);
+      setTicketStats(ticketByStatus);
+
       setStats({
         totalFacilities: facilities.length,
         totalBookings: bookings.length,
-        pendingBookings: bookings.filter(b => b.status === 'PENDING').length,
-        totalTickets: tickets.length,
-        pendingTickets: tickets.filter(t => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length,
+        pendingBookings: pendingBookings.length,
+        totalTickets: ticketStatsData.total || 0,
+        pendingTickets: (ticketStatsData.open || 0) + (ticketStatsData.inProgress || 0),
         totalUsers: userStats.data.totalUsers || 0,
         pendingUsers: userStats.data.pendingUsers || 0,
         enabledUsers: userStats.data.enabledUsers || 0
       });
+
+      // recent tickets still need the list — fetch separately but limit
+      const recentList = await ticketService.getAllTickets();
       setRecentBookings(bookings.slice(0, 5));
-      setRecentTickets(tickets.slice(0, 5));
+      setRecentTickets(recentList.slice(0, 5));
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      setError('Failed to load dashboard data. Please ensure the backend is running and the database schema is up to date.');
     } finally {
       setLoading(false);
     }
@@ -193,6 +204,15 @@ const AdminDashboard = () => {
 
   return (
     <div style={{ fontFamily: "'Inter', -apple-system, sans-serif", color: '#1a1a2e' }}>
+      {error && (
+        <div style={{ 
+          background: '#fff1f0', border: '1px solid #ffa39e', borderRadius: 6, 
+          padding: '12px 20px', marginBottom: 20, color: '#cf1322', fontWeight: 600,
+          display: 'flex', alignItems: 'center', gap: 10
+        }}>
+          <WarningOutlined /> {error}
+        </div>
+      )}
 
       {/* ── Welcome Banner ── */}
       <div style={{
@@ -351,8 +371,9 @@ const AdminDashboard = () => {
             { icon: <ApartmentOutlined />, label: 'Manage Facilities', href: '/facilities', accent: '#52c41a' },
             { icon: <NotificationOutlined />, label: 'Broadcast Info', onClick: () => setBroadcastModal(true), accent: '#e94560' },
             { icon: <SendOutlined />, label: 'Campus Chat', href: '/chat', accent: '#0f3460' },
-          ].map(({ icon, label, href, onClick, accent }) => (
-            <a key={label} href={href || '#'} onClick={onClick} style={{
+            { icon: <CheckCircleOutlined />, label: 'QR Check-in', href: '/bookings/qr-check-in', accent: '#a569bd' },
+          ].map(({ icon, label, href,onClick, accent }) => (
+            <a key={href} href={href|| '#'} onClick={onClick} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               gap: 8, padding: '16px 10px', background: accent + '08', borderRadius: 6, textDecoration: 'none',
               border: `1px solid ${accent}22`, transition: 'all 0.2s',

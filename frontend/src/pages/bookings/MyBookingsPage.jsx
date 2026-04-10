@@ -1,15 +1,30 @@
-import { useState, useEffect } from 'react'; 
-import { Card, Table, Button, Tag, Space, Modal, message, Empty } from 'antd'; 
-import { PlusOutlined, EyeOutlined, CloseOutlined, CalendarOutlined, InfoCircleOutlined } from '@ant-design/icons'; 
+import { useState, useEffect, useMemo } from 'react'; 
+import { 
+  Card, Table, Button, Tag, Space, Modal, message, Empty, 
+  Row, Col, Statistic, Input, Select, Typography 
+} from 'antd'; 
+import { 
+  PlusOutlined, EyeOutlined, CloseOutlined, CalendarOutlined, 
+  InfoCircleOutlined, SearchOutlined, ClearOutlined 
+} from '@ant-design/icons'; 
 import bookingService from '../../services/bookingService'; 
 import { useNavigate } from 'react-router-dom'; 
+
+const { Option } = Select;
+const { Text } = Typography;
 
 const MyBookingsPage = () => { 
   const navigate = useNavigate(); 
   const [bookings, setBookings] = useState([]); 
+  const [allBookings, setAllBookings] = useState([]); 
   const [loading, setLoading] = useState(true); 
   const [selectedBooking, setSelectedBooking] = useState(null); 
   const [viewModalVisible, setViewModalVisible] = useState(false); 
+  const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [qrBase64, setQrBase64] = useState('');
+
+  const [searchText, setSearchText] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
 
   useEffect(() => { 
     fetchBookings(); 
@@ -20,6 +35,7 @@ const MyBookingsPage = () => {
       setLoading(true); 
       const data = await bookingService.getMyBookings(); 
       setBookings(data); 
+      setAllBookings(data);
     } catch (error) { 
       console.error('Error fetching bookings:', error); 
       message.error('Failed to fetch bookings'); 
@@ -27,6 +43,31 @@ const MyBookingsPage = () => {
       setLoading(false); 
     } 
   }; 
+
+  const stats = {
+    total: allBookings.length,
+    pending: allBookings.filter(b => b.status === 'PENDING').length,
+    approved: allBookings.filter(b => b.status === 'APPROVED').length,
+    rejected: allBookings.filter(b => b.status === 'REJECTED').length,
+  };
+
+  const filteredBookings = useMemo(() => {
+    return bookings.filter(b => {
+      const matchesSearch = !searchText || 
+        b.facilityName?.toLowerCase().includes(searchText.toLowerCase()) ||
+        b.purpose?.toLowerCase().includes(searchText.toLowerCase()) ||
+        b.id.toString().includes(searchText);
+      
+      const matchesStatus = !filterStatus || b.status === filterStatus;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [bookings, searchText, filterStatus]);
+
+  const clearFilters = () => {
+    setSearchText('');
+    setFilterStatus('');
+  };
 
   const handleCancel = async (id) => { 
     Modal.confirm({ 
@@ -56,6 +97,27 @@ const MyBookingsPage = () => {
     }; 
     return colors[status] || 'default'; 
   }; 
+
+  const handleViewQR = async (id) => {
+    try {
+      const base64 = await bookingService.getBookingQR(id);
+      setQrBase64(base64);
+      setQrModalVisible(true);
+    } catch (error) {
+      message.error('Failed to generate QR code');
+    }
+  };
+
+  const handleDownloadQR = () => {
+    if (!qrBase64) return;
+    const link = document.createElement('a');
+    link.href = `data:image/png;base64,${qrBase64}`;
+    link.download = `booking-qr-${selectedBooking?.id || 'code'}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    message.success('QR Code download started');
+  };
 
   const handleView = (booking) => { 
     setSelectedBooking(booking); 
@@ -111,13 +173,40 @@ const MyBookingsPage = () => {
               Cancel 
             </Button> 
           )} 
+          {record.status === 'APPROVED' && !record.checkedIn && (
+            <Button 
+              icon={<CalendarOutlined />} 
+              onClick={() => handleViewQR(record.id)}
+              className="bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100"
+            >
+              View QR
+            </Button>
+          )}
+          {record.checkedIn && (
+            <Tag color="#87d068">Checked In</Tag>
+          )}
         </Space> 
       ), 
     }, 
   ]; 
 
   return ( 
-    <div className="space-y-6"> 
+    <div className="space-y-4"> 
+      <Row gutter={12}>
+        {[
+          { label: 'Total', value: stats.total, color: '#1677ff' },
+          { label: 'Pending', value: stats.pending, color: '#fa8c16' },
+          { label: 'Approved', value: stats.approved, color: '#52c41a' },
+          { label: 'Rejected', value: stats.rejected, color: '#f5222d' },
+        ].map(({ label, value, color }) => (
+          <Col xs={12} sm={6} key={label}>
+            <Card size="small" style={{ borderTop: `3px solid ${color}` }}>
+              <Statistic title={label} value={value} valueStyle={{ color, fontSize: 22 }} />
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
       <Card className="shadow-sm border-0">
         <div className="flex justify-between items-center mb-6"> 
           <div> 
@@ -135,16 +224,49 @@ const MyBookingsPage = () => {
           </Button> 
         </div> 
 
-        <Table 
-          columns={columns}
-          dataSource={bookings}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 8 }}
-          className="booking-history-table"
-        />
+        <div className="flex flex-wrap gap-3 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+          <Input
+            placeholder="Search facility, purpose, ID..."
+            prefix={<SearchOutlined className="text-gray-400" />}
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
+            allowClear
+            style={{ width: 260 }}
+          />
+          <Select value={filterStatus} onChange={setFilterStatus} style={{ width: 150 }}>
+            <Option value="">All Statuses</Option>
+            <Option value="PENDING"><Tag color="orange">PENDING</Tag></Option>
+            <Option value="APPROVED"><Tag color="green">APPROVED</Tag></Option>
+            <Option value="REJECTED"><Tag color="red">REJECTED</Tag></Option>
+            <Option value="CANCELLED"><Tag color="default">CANCELLED</Tag></Option>
+          </Select>
+          {(searchText || filterStatus) && (
+            <Button icon={<ClearOutlined />} onClick={clearFilters}>Clear</Button>
+          )}
+          {(searchText || filterStatus) && (
+            <Text type="secondary" className="self-center text-sm">
+              {filteredBookings.length} of {bookings.length} bookings
+            </Text>
+          )}
+        </div>
 
-        {bookings.length === 0 && !loading && (
+        {bookings.length > 0 ? (
+          <Table 
+            columns={columns}
+            dataSource={filteredBookings}
+            rowKey="id"
+            loading={loading}
+            pagination={{ pageSize: 8, showTotal: total => `${total} bookings` }}
+            className="booking-history-table"
+            locale={{
+              emptyText: (searchText || filterStatus)
+                ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No bookings match your filters">
+                    <Button onClick={clearFilters}>Clear Filters</Button>
+                  </Empty>
+                : 'No bookings yet'
+            }}
+          />
+        ) : !loading && (
           <Empty 
             description={
               <div className="text-center">
@@ -257,6 +379,42 @@ const MyBookingsPage = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* QR Code Modal */}
+      <Modal
+        title="Check-in QR Code"
+        open={qrModalVisible}
+        onCancel={() => setQrModalVisible(false)}
+        footer={[
+          <Button key="download" type="primary" onClick={handleDownloadQR}>
+            Download QR
+          </Button>,
+          <Button key="close" onClick={() => setQrModalVisible(false)}>
+            Close
+          </Button>
+        ]}
+        width={350}
+        centered
+      >
+        <div className="text-center p-4">
+          <p className="mb-4 text-gray-500">Show this QR code to the technician/admin at the facility for check-in.</p>
+          <div className="bg-white p-4 rounded-xl shadow-inner inline-block border-2 border-dashed border-blue-200">
+            {qrBase64 ? (
+              <img src={`data:image/png;base64,${qrBase64}`} alt="Booking QR Code" style={{ width: 250, height: 250 }} />
+            ) : (
+              <div style={{ width: 250, height: 250, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                Loading...
+              </div>
+            )}
+          </div>
+          {selectedBooking && (
+            <div className="mt-4">
+              <p className="font-bold text-lg">{selectedBooking.facilityName}</p>
+              <p className="text-gray-500">BK-{selectedBooking.id}</p>
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );

@@ -117,6 +117,19 @@ const UserDashboard = () => {
   const approvedBookings = myBookings.filter(b => b.status === 'APPROVED').length;
   const openTickets = myTickets.filter(t => t.status === 'OPEN').length;
 
+  // Ticket stats
+  const ticketStats = {
+    total: myTickets.length,
+    open: myTickets.filter(t => t.status === 'OPEN').length,
+    inProgress: myTickets.filter(t => t.status === 'IN_PROGRESS').length,
+    resolved: myTickets.filter(t => t.status === 'RESOLVED').length,
+    closed: myTickets.filter(t => t.status === 'CLOSED').length,
+    rejected: myTickets.filter(t => t.status === 'REJECTED').length,
+  };
+  const resolutionRate = ticketStats.total > 0
+    ? Math.round(((ticketStats.resolved + ticketStats.closed) / ticketStats.total) * 100)
+    : 0;
+
   const announcements = [
     { id: 1, title: 'Library Closure', content: 'The main library will be closed for maintenance this Sunday from 8 AM to 2 PM.', type: 'alert', date: 'Oct 12' },
     { id: 2, title: 'Annual Cultural Fest', content: 'Registrations are now open for the Annual Cultural Extravaganza!', type: 'news', date: 'Oct 10' },
@@ -180,7 +193,7 @@ const UserDashboard = () => {
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <StatCard icon={<UserOutlined />} label="Account Status" value={user?.enabled ? 'Active' : 'Pending'} sub={user?.enabled ? 'Verified' : 'Limited Access'} accent={user?.enabled ? '#52c41a' : '#f5a623'} />
             <StatCard icon={<CalendarOutlined />} label="Total Bookings" value={myBookings.length} sub={`${approvedBookings} approved`} accent="#0f3460" />
-            <StatCard icon={<ToolOutlined />} label="My Tickets" value={myTickets.length} sub={`${openTickets} open`} accent="#e94560" />
+            <StatCard icon={<ToolOutlined />} label="My Tickets" value={myTickets.length} sub={`${ticketStats.open} open · ${resolutionRate}% resolved`} accent="#e94560" />
           </div>
 
           <div style={{ background: '#fff', borderRadius: 6, padding: '18px 22px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
@@ -254,36 +267,89 @@ const UserDashboard = () => {
           </div>
         </div>
 
+        {/* ── Ticket Statistics Card ── */}
         <div style={{ background: '#fff', borderRadius: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
           <div style={{ padding: '14px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e' }}>
               <ToolOutlined style={{ color: '#e94560', marginRight: 8 }} />
-              My Support Tickets
+              My Ticket Statistics
             </span>
             <Link to="/my-tickets" style={{ color: '#f5a623', fontSize: 12, fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
               View All <ArrowRightOutlined />
             </Link>
           </div>
-          <div style={{ padding: '0 8px' }}>
-            {myTickets.slice(0, 4).map((item, i) => (
-              <div key={item.id || i} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 12px', borderBottom: i < 3 ? '1px solid #f7f7f7' : 'none'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 6, background: '#fff1f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e94560', fontSize: 16 }}>
-                    <ToolOutlined />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e' }}>{item.title}</div>
-                    <div style={{ fontSize: 10, color: '#666' }}>ID: #{item.id}</div>
-                  </div>
+
+          {myTickets.length === 0 ? (
+            <div style={{ padding: 24 }}>
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No tickets submitted yet">
+                <Link to="/my-tickets">
+                  <button style={{ background: '#e94560', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 12 }}>
+                    Report an Issue
+                  </button>
+                </Link>
+              </Empty>
+            </div>
+          ) : (
+            <div style={{ padding: '16px 20px' }}>
+
+              {/* Total + Resolution Rate */}
+              <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                <div style={{ flex: 1, background: '#f8fafc', borderRadius: 8, padding: '12px 16px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: '#1a1a2e' }}>{ticketStats.total}</div>
+                  <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginTop: 2 }}>Total Submitted</div>
                 </div>
-                <StatusBadge status={item.status} />
+                <div style={{ flex: 1, background: resolutionRate >= 70 ? '#f6ffed' : resolutionRate >= 40 ? '#fff7e6' : '#fff1f0', borderRadius: 8, padding: '12px 16px', textAlign: 'center', border: `1px solid ${resolutionRate >= 70 ? '#b7eb8f' : resolutionRate >= 40 ? '#ffd591' : '#ffa39e'}` }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: resolutionRate >= 70 ? '#389e0d' : resolutionRate >= 40 ? '#d46b08' : '#cf1322' }}>
+                    {resolutionRate}%
+                  </div>
+                  <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginTop: 2 }}>Resolution Rate</div>
+                </div>
               </div>
-            ))}
-            {myTickets.length === 0 && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No tickets yet" />}
-          </div>
+
+              {/* Status Breakdown Bars */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[
+                  { label: 'Open', value: ticketStats.open, color: '#1677ff' },
+                  { label: 'In Progress', value: ticketStats.inProgress, color: '#fa8c16' },
+                  { label: 'Resolved', value: ticketStats.resolved, color: '#52c41a' },
+                  { label: 'Closed', value: ticketStats.closed, color: '#8c8c8c' },
+                  { label: 'Rejected', value: ticketStats.rejected, color: '#ff4d4f' },
+                ].filter(s => s.value > 0).map(({ label, value, color }) => (
+                  <div key={label}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#444' }}>{label}</span>
+                      <span style={{ fontSize: 12, color: '#888' }}>{value} / {ticketStats.total}</span>
+                    </div>
+                    <div style={{ height: 6, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${(value / ticketStats.total) * 100}%`,
+                        background: color,
+                        borderRadius: 4,
+                        transition: 'width 0.6s ease',
+                      }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Priority breakdown of open tickets */}
+              {ticketStats.open > 0 && (() => {
+                const openList = myTickets.filter(t => t.status === 'OPEN');
+                const critical = openList.filter(t => t.priority === 'CRITICAL').length;
+                const high = openList.filter(t => t.priority === 'HIGH').length;
+                return (critical > 0 || high > 0) ? (
+                  <div style={{ marginTop: 14, padding: '10px 12px', background: '#fff1f0', borderRadius: 6, border: '1px solid #ffa39e', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <InfoCircleOutlined style={{ color: '#e94560', fontSize: 14, flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, color: '#cf1322', fontWeight: 600 }}>
+                      {critical > 0 && `${critical} CRITICAL`}{critical > 0 && high > 0 && ', '}{high > 0 && `${high} HIGH`} priority ticket{(critical + high) > 1 ? 's' : ''} need attention
+                    </span>
+                  </div>
+                ) : null;
+              })()}
+
+            </div>
+          )}
         </div>
       </div>
     </div>

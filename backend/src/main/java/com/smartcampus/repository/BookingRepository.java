@@ -31,5 +31,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
            "AND b.endTime > :now ORDER BY b.startTime ASC")
     List<Booking> findUpcomingBookings(@Param("facilityId") Long facilityId,
                                        @Param("now") LocalDateTime now);
+
+    List<Booking> findByFacilityIdAndStartTimeAfter(Long facilityId, LocalDateTime startTime);
+
+    List<Booking> findByFacilityIdAndStartTimeBetween(Long facilityId, LocalDateTime start, LocalDateTime end);
 }
 

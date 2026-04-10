@@ -130,12 +130,38 @@ const FacilitiesPage = () => {
       render: (capacity) => capacity || 'N/A',
     },
     {
+      title: 'Health',
+      dataIndex: 'healthScore',
+      key: 'healthScore',
+      render: (score) => (
+        <Tag color={score === 'EXCELLENT' ? 'success' : score === 'GOOD' ? 'blue' : score === 'NEEDS_ATTENTION' ? 'orange' : 'red'}>
+          {score}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Utilization',
+      dataIndex: 'utilizationPercentage',
+      key: 'utilizationPercentage',
+      render: (percent) => (
+        <Space direction="vertical" size={2} style={{ width: '100%' }}>
+          <div className="text-xs text-gray-500">{percent?.toFixed(1)}%</div>
+          <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div 
+              className={`h-full ${percent > 80 ? 'bg-green-500' : percent > 50 ? 'bg-blue-500' : 'bg-orange-500'}`} 
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+        </Space>
+      ),
+    },
+    {
       title: 'Status',
       dataIndex: 'available',
       key: 'available',
       render: (available) => (
         <Tag color={getAvailabilityColor(available)}>
-          {available ? 'Active / Available' : 'Out of Service'}
+          {available ? 'Active' : 'Out of Service'}
         </Tag>
       ),
     },
@@ -151,15 +177,17 @@ const FacilitiesPage = () => {
           >
             Details
           </Button>
-          <Button 
-            type="primary"
-            icon={<CalendarOutlined />} 
-            size="small"
-            disabled={!record.available}
-            onClick={() => handleBook(record)}
-          >
-            Book
-          </Button>
+          {!isAdmin && (
+            <Button 
+              type="primary"
+              icon={<CalendarOutlined />} 
+              size="small"
+              disabled={!record.available}
+              onClick={() => handleBook(record)}
+            >
+              Book
+            </Button>
+          )}
           {isAdmin && (
             <>
               <Button 
@@ -179,6 +207,14 @@ const FacilitiesPage = () => {
       ),
     },
   ];
+
+  const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [currentQrUrl, setCurrentQrUrl] = useState('');
+
+  const handleShowQR = (id) => {
+    setCurrentQrUrl(facilityService.getFacilityQRCodeUrl(id));
+    setQrModalVisible(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -244,10 +280,13 @@ const FacilitiesPage = () => {
         open={viewModalVisible}
         onCancel={() => setViewModalVisible(false)}
         footer={[
+          <Button key="qr" icon={<SearchOutlined />} onClick={() => handleShowQR(selectedFacility.id)}>
+            QR Code
+          </Button>,
           <Button key="close" onClick={() => setViewModalVisible(false)}>
             Close
           </Button>,
-          selectedFacility?.available && (
+          !isAdmin && selectedFacility?.available && (
             <Button 
               key="book" 
               type="primary" 
@@ -263,10 +302,25 @@ const FacilitiesPage = () => {
       >
         {selectedFacility && (
           <div className="space-y-4">
-            <div>
-              <label className="text-gray-500">Name:</label>
-              <p className="font-medium text-lg">{selectedFacility.name}</p>
+            <div className="flex justify-between items-start">
+              <div>
+                <label className="text-gray-500">Name:</label>
+                <p className="font-medium text-lg">{selectedFacility.name}</p>
+              </div>
+              <Tag color={selectedFacility.healthScore === 'EXCELLENT' ? 'success' : 'warning'}>
+                Health: {selectedFacility.healthScore}
+              </Tag>
             </div>
+            
+            {selectedFacility.tags && selectedFacility.tags.length > 0 && (
+              <div>
+                <label className="text-gray-500">Amenities:</label>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {selectedFacility.tags.map(tag => <Tag key={tag} color="geekblue">{tag}</Tag>)}
+                </div>
+              </div>
+            )}
+
             <Row gutter={16}>
               <Col span={12}>
                 <label className="text-gray-500">Type:</label>
@@ -295,18 +349,30 @@ const FacilitiesPage = () => {
                 <p className="font-medium">{selectedFacility.equipment}</p>
               </div>
             )}
-            {selectedFacility.availabilityWindows && (
-              <div>
-                <label className="text-gray-500">Availability Windows:</label>
-                <p className="font-medium">{selectedFacility.availabilityWindows}</p>
-              </div>
-            )}
             <div>
               <label className="text-gray-500">Description:</label>
               <p className="font-medium">{selectedFacility.description || 'No description'}</p>
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* QR Code Modal */}
+      <Modal
+        title="Resource QR Code"
+        open={qrModalVisible}
+        onCancel={() => setQrModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setQrModalVisible(false)}>Close</Button>,
+          <Button key="print" type="primary" onClick={() => window.print()}>Print / Save</Button>
+        ]}
+        width={300}
+        centered
+      >
+        <div className="flex flex-col items-center justify-center space-y-4 p-4">
+          <img src={currentQrUrl} alt="Resource QR Code" className="w-48 h-48 border rounded shadow-sm" />
+          <p className="text-gray-500 text-center text-sm">Scan to book this resource instantly</p>
+        </div>
       </Modal>
 
       {/* Booking Modal */}

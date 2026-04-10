@@ -1,17 +1,25 @@
-import { useState, useEffect } from 'react';
-import { Table, Button, Tag, Space, Modal, message, Card, Select, Input } from 'antd';
-import { CheckOutlined, CloseOutlined, EyeOutlined, CalendarOutlined } from '@ant-design/icons';
+import { useState, useEffect, useMemo } from 'react';
+import { 
+  Table, Button, Tag, Space, Modal, message, Card, Select, 
+  Input, Row, Col, Statistic, Typography, Empty 
+} from 'antd';
+import { 
+  CheckOutlined, CloseOutlined, EyeOutlined, CalendarOutlined,
+  SearchOutlined, ClearOutlined 
+} from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext'; 
 import bookingService from '../../services/bookingService'; 
 
 const { Option } = Select;
 const { TextArea } = Input;
+const { Text } = Typography;
 
 const BookingsPage = () => {
   const { isAdmin } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('ALL');
+  const [searchText, setSearchText] = useState('');
+  const [filterStatus, setFilterStatus] = useState('ALL');
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [viewModalVisible, setViewModalVisible] = useState(false);
   
@@ -23,17 +31,12 @@ const BookingsPage = () => {
 
   useEffect(() => {
     fetchBookings();
-  }, [filter]);
+  }, []);
 
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      let data;
-      if (filter === 'ALL') {
-        data = await bookingService.getAllBookings();
-      } else {
-        data = await bookingService.getBookingsByStatus(filter);
-      }
+      const data = await bookingService.getAllBookings();
       setBookings(data);
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -41,6 +44,33 @@ const BookingsPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const stats = {
+    total: bookings.length,
+    pending: bookings.filter(b => b.status === 'PENDING').length,
+    approved: bookings.filter(b => b.status === 'APPROVED').length,
+    rejected: bookings.filter(b => b.status === 'REJECTED' || b.status === 'CANCELLED').length,
+  };
+
+  const filteredBookings = useMemo(() => {
+    return bookings.filter(b => {
+      const matchesSearch = !searchText || 
+        b.facilityName?.toLowerCase().includes(searchText.toLowerCase()) ||
+        b.userName?.toLowerCase().includes(searchText.toLowerCase()) ||
+        b.userEmail?.toLowerCase().includes(searchText.toLowerCase()) ||
+        b.purpose?.toLowerCase().includes(searchText.toLowerCase()) ||
+        b.id.toString().includes(searchText);
+      
+      const matchesStatus = filterStatus === 'ALL' || b.status === filterStatus;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [bookings, searchText, filterStatus]);
+
+  const clearFilters = () => {
+    setSearchText('');
+    setFilterStatus('ALL');
   };
 
   const handleApprove = async (id) => {
@@ -199,33 +229,74 @@ const BookingsPage = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <Card>
+    <div className="space-y-4">
+      <Row gutter={12}>
+        {[
+          { label: 'Site-wide Bookings', value: stats.total, color: '#1677ff' },
+          { label: 'Pending Reviews', value: stats.pending, color: '#fa8c16' },
+          { label: 'Active Approvals', value: stats.approved, color: '#52c41a' },
+          { label: 'Rejected/Cancelled', value: stats.rejected, color: '#d9d9d9' },
+        ].map(({ label, value, color }) => (
+          <Col xs={12} sm={6} key={label}>
+            <Card size="small" style={{ borderTop: `3px solid ${color}` }}>
+              <Statistic title={label} value={value} valueStyle={{ color, fontSize: 22 }} />
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      <Card className="shadow-sm border-0">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Bookings Management</h1>
             <p className="text-gray-500">Review and manage site-wide facility bookings</p>
           </div>
-          <Select
-            value={filter}
-            onChange={setFilter}
-            style={{ width: 200 }}
-          >
-            <Option value="ALL">All Status</Option>
-            <Option value="PENDING">Pending</Option>
-            <Option value="APPROVED">Approved</Option>
-            <Option value="REJECTED">Rejected</Option>
-            <Option value="CANCELLED">Cancelled</Option>
-          </Select>
         </div>
 
-        <Table 
-          columns={columns}
-          dataSource={bookings}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-        />
+        <div className="flex flex-wrap gap-3 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+          <Input
+            placeholder="Search facility, user, purpose, ID..."
+            prefix={<SearchOutlined className="text-gray-400" />}
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
+            allowClear
+            style={{ width: 300 }}
+          />
+          <Select value={filterStatus} onChange={setFilterStatus} style={{ width: 180 }}>
+            <Option value="ALL">All Statuses</Option>
+            <Option value="PENDING"><Tag color="orange">PENDING</Tag></Option>
+            <Option value="APPROVED"><Tag color="green">APPROVED</Tag></Option>
+            <Option value="REJECTED"><Tag color="red">REJECTED</Tag></Option>
+            <Option value="CANCELLED"><Tag color="default">CANCELLED</Tag></Option>
+          </Select>
+          {(searchText || filterStatus !== 'ALL') && (
+            <Button icon={<ClearOutlined />} onClick={clearFilters}>Clear</Button>
+          )}
+          {(searchText || filterStatus !== 'ALL') && (
+            <Text type="secondary" className="self-center text-sm">
+              {filteredBookings.length} of {bookings.length} total bookings
+            </Text>
+          )}
+        </div>
+
+        {bookings.length > 0 ? (
+          <Table 
+            columns={columns}
+            dataSource={filteredBookings}
+            rowKey="id"
+            loading={loading}
+            pagination={{ pageSize: 10, showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} bookings` }}
+            locale={{
+              emptyText: (searchText || filterStatus !== 'ALL')
+                ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No bookings match your administration filters">
+                    <Button onClick={clearFilters}>Clear Filters</Button>
+                  </Empty>
+                : 'No bookings records found'
+            }}
+          />
+        ) : !loading && (
+          <Empty description="No booking requests have been submitted yet" />
+        )}
       </Card>
 
       {/* View Booking Modal */}

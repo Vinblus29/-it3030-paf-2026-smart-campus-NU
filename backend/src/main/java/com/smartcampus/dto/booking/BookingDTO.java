@@ -21,6 +21,11 @@ public class BookingDTO {
     private String attachmentUrl;
     private int numberOfPeople;
     private LocalDateTime createdAt;
+    private Boolean checkedIn = false;
+    private LocalDateTime checkInTime;
+    private String qrToken;
+    private String recurrenceType;
+    private boolean waitlisted;
 
     // Constructors
     public BookingDTO() {
@@ -161,6 +166,46 @@ public class BookingDTO {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Boolean getCheckedIn() {
+        return checkedIn;
+    }
+
+    public void setCheckedIn(Boolean checkedIn) {
+        this.checkedIn = checkedIn;
+    }
+
+    public LocalDateTime getCheckInTime() {
+        return checkInTime;
+    }
+
+    public void setCheckInTime(LocalDateTime checkInTime) {
+        this.checkInTime = checkInTime;
+    }
+
+    public String getQrToken() {
+        return qrToken;
+    }
+
+    public void setQrToken(String qrToken) {
+        this.qrToken = qrToken;
+    }
+
+    public String getRecurrenceType() {
+        return recurrenceType;
+    }
+
+    public void setRecurrenceType(String recurrenceType) {
+        this.recurrenceType = recurrenceType;
+    }
+
+    public boolean isWaitlisted() {
+        return waitlisted;
+    }
+
+    public void setWaitlisted(boolean waitlisted) {
+        this.waitlisted = waitlisted;
     }
 }
 

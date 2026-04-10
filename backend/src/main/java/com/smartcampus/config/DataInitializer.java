@@ -16,6 +16,9 @@ public class DataInitializer {
     @Bean
     CommandLineRunner initDatabase(UserRepository userRepository, 
                                    com.smartcampus.repository.ChatGroupRepository groupRepository,
+                                   com.smartcampus.repository.FacilityRepository facilityRepository,
+                                   com.smartcampus.repository.BlackoutPeriodRepository blackoutPeriodRepository,
+                                   com.smartcampus.repository.MaintenanceTicketRepository maintenanceTicketRepository,
                                    PasswordEncoder passwordEncoder) {
         return args -> {
             // Only seed if database is empty
@@ -64,6 +67,26 @@ public class DataInitializer {
                     groupRepository.save(new com.smartcampus.model.ChatGroup("Year 2 Announcements", "Official broadcasts for Year 2 students", true));
                     groupRepository.save(new com.smartcampus.model.ChatGroup("Year 3 Announcements", "Official broadcasts for Year 3 students", true));
                     groupRepository.save(new com.smartcampus.model.ChatGroup("Year 4 Announcements", "Official broadcasts for Year 4 students", true));
+                }
+
+                // Create Facilities
+                if (facilityRepository.count() == 0) {
+                    com.smartcampus.model.Facility f1 = new com.smartcampus.model.Facility("Main Auditorium", "LECTURE_HALL", "Building A, Floor 1", 500);
+                    f1.setTags(new java.util.HashSet<>(java.util.Arrays.asList("Projector", "AC", "WiFi", "Video-Conf")));
+                    f1 = facilityRepository.save(f1);
+
+                    com.smartcampus.model.Facility f2 = new com.smartcampus.model.Facility("Advanced Computing Lab", "LAB", "Building C, Floor 2", 30);
+                    f2.setTags(new java.util.HashSet<>(java.util.Arrays.asList("WiFi", "Smart-Board", "AC")));
+                    f2 = facilityRepository.save(f2);
+                    
+                    // Add a maintenance ticket for the lab to show health score
+                    maintenanceTicketRepository.save(new com.smartcampus.model.MaintenanceTicket(f2, "PC 05 not starting", "MEDIUM"));
+                    
+                    // Add a blackout period for auditorium
+                    blackoutPeriodRepository.save(new com.smartcampus.model.BlackoutPeriod(f1, 
+                        LocalDateTime.now().plusDays(1).withHour(8).withMinute(0),
+                        LocalDateTime.now().plusDays(1).withHour(18).withMinute(0),
+                        "Annual Convocation Rehearsal"));
                 }
                 
                 System.out.println("========================================");
