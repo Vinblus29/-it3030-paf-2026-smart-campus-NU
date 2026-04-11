@@ -58,6 +58,9 @@ public class AuthService {
         System.out.println("Phone: " + request.getPhoneNumber());
         System.out.println("Image URL exists: " + (request.getProfileImageUrl() != null && !request.getProfileImageUrl().isEmpty()));
 
+        // Validate phone number
+        validatePhoneNumber(request.getPhoneNumber());
+
         User user = userRepository.findByEmail(request.getEmail()).orElse(null);
         
         if (user != null && user.isEnabled()) {
@@ -90,10 +93,17 @@ public class AuthService {
 
     @Transactional
     public UserResponse registerAdminCreatedUser(RegisterRequest request) {
+        // Store plaintext password for email before encoding
+        String plainTextPassword = request.getPassword();
+        
         register(request);
         User user = userRepository.findByEmail(request.getEmail()).orElseThrow(() -> new RuntimeException("User not found"));
         user.setEnabled(true);
         userRepository.save(user);
+        
+        // Send welcome email with credentials
+        sendTechnicianWelcomeEmail(user, plainTextPassword);
+        
         return mapToUserResponse(user);
     }
 
@@ -314,6 +324,39 @@ public class AuthService {
         }
     }
 
+    private void sendTechnicianWelcomeEmail(User user, String password) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(user.getEmail());
+            message.setSubject("Welcome to Smart Campus - Account Created");
+            
+            StringBuilder emailBody = new StringBuilder();
+            emailBody.append("Welcome to Smart Campus!\n\n");
+            emailBody.append("Your account has been successfully created by the administrator.\n\n");
+            emailBody.append("Account Details:\n");
+            emailBody.append("Email: ").append(user.getEmail()).append("\n");
+            emailBody.append("Password: ").append(password).append("\n");
+            emailBody.append("Role: ").append(user.getRole().toString()).append("\n\n");
+            emailBody.append("IMPORTANT SECURITY NOTICE:\n");
+            emailBody.append("Please change your password immediately after logging in for the first time.\n");
+            emailBody.append("Go to your Profile settings and update your password to something only you know.\n\n");
+            emailBody.append("To access the portal, visit: ").append("https://smartcampus.example.com").append("\n\n");
+            emailBody.append("If you did not expect this email or have any questions, please contact the administrator.\n\n");
+            emailBody.append("Best regards,\n");
+            emailBody.append("Smart Campus Team");
+            
+            message.setText(emailBody.toString());
+            message.setFrom("Smart Campus <keerthiganthevarasa@gmail.com>");
+            mailSender.send(message);
+            
+            logger.info("Welcome email sent successfully to technician: {}", user.getEmail());
+        } catch (Exception e) {
+            // Log error but don't throw - in production, use proper logging
+            System.err.println("Failed to send technician welcome email: " + e.getMessage());
+            logger.error("Failed to send welcome email to technician: {}", user.getEmail(), e);
+        }
+    }
+
     private UserResponse mapToUserResponse(User user) {
         return new UserResponse(
             user.getId(),
@@ -363,6 +406,29 @@ public class AuthService {
     public UserResponse getCurrentUserResponse() {
         User user = getCurrentUser();
         return mapToUserResponse(user);
+    }
+
+    private void validatePhoneNumber(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
+            throw new IllegalArgumentException("Phone number cannot be empty");
+        }
+
+        // Remove common formatting characters
+        String cleanedPhone = phoneNumber.replaceAll("[\\s\\-().]", "");
+
+        // Check if it starts with + (international), then remove it for digit check
+        if (cleanedPhone.startsWith("+")) {
+            cleanedPhone = cleanedPhone.substring(1);
+        }
+
+        // Validate: must contain only digits and be maximum 10 digits
+        if (!cleanedPhone.matches("^[0-9]{1,10}$")) {
+            throw new IllegalArgumentException(
+                "Phone number must be valid (max 10 digits). Examples: 9876543210, +919876543210"
+            );
+        }
+
+        logger.info("Phone number validated successfully: {}", phoneNumber.replaceAll("[0-9]", "*"));
     }
 }
 

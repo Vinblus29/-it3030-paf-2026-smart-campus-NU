@@ -299,7 +299,7 @@ const Register = () => {
               <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>Phone Verification</h3>
               <p style={{ color: '#888', fontSize: 13, marginBottom: 20 }}>Protect your account with SMS verification.</p>
               <Form.Item name="phone" label="Phone Number" rules={[{ required: true }]}>
-                <Input disabled={phoneVerified} prefix={<PhoneOutlined />} placeholder="+94 XX XXX XXXX" suffix={
+                <Input disabled={phoneVerified} prefix={<PhoneOutlined />} placeholder="9876543210" maxLength={10} suffix={
                   <Button
                     type="link"
                     size="small"

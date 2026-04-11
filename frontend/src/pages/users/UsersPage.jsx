@@ -367,7 +367,7 @@ const UsersPage = () => {
             <Input.Password placeholder="Enter initial password" />
           </Form.Item>
           <Form.Item name="phoneNumber" label="Phone Number" rules={[{ required: true, message: 'Required' }]}>
-            <Input placeholder="+1234567890" />
+            <Input placeholder="9876543210" maxLength={10} />
           </Form.Item>
           <Form.Item name="role" label="Role" initialValue="TECHNICIAN" rules={[{ required: true, message: 'Required' }]}>
             <Select>

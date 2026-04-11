@@ -3,6 +3,7 @@ package com.smartcampus.dto.auth;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -22,6 +23,11 @@ public class RegisterRequest {
     @NotBlank(message = "Last name is required")
     private String lastName;
 
+    @NotBlank(message = "Phone number is required")
+    @Pattern(
+        regexp = "^[+]?[0-9]{1,3}[\\s.-]?[(]?[0-9]{1,4}[)]?[\\s.-]?[0-9]{1,4}[\\s.-]?[0-9]{1,4}$",
+        message = "Phone number must be valid (max 10 digits). Examples: 9876543210, +91 9876543210"
+    )
     private String phoneNumber;
 
     private String role; // USER, ADMIN, TECHNICIAN
