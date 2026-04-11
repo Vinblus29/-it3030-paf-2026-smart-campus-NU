@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Form, Input, Select, Switch, InputNumber, message, Upload, Button } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
+import { UploadOutlined, PlusOutlined } from '@ant-design/icons';
 import facilityService from '../services/facilityService';
 
 const { TextArea } = Input;
@@ -10,9 +10,13 @@ const FacilityModal = ({ visible, facility, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState([]);
   const [submitting, setSubmitting] = useState(false);
-  
+  const [facilityTypes, setFacilityTypes] = useState([]);
+  const [typesLoading, setTypesLoading] = useState(false);
+
+  // Fetch dynamic types from backend whenever modal opens
   useEffect(() => {
     if (visible) {
+      fetchTypes();
       if (facility) {
         form.setFieldsValue({
           ...facility,
@@ -35,9 +39,25 @@ const FacilityModal = ({ visible, facility, onCancel, onSuccess }) => {
     }
   }, [visible, facility, form]);
 
+  const fetchTypes = async () => {
+    setTypesLoading(true);
+    try {
+      const types = await facilityService.getFacilityTypes();
+      setFacilityTypes(types);
+    } catch (error) {
+      console.error('Error fetching facility types:', error);
+    } finally {
+      setTypesLoading(false);
+    }
+  };
+
   const handleFinish = async (values) => {
     setSubmitting(true);
     try {
+      // Normalize type to uppercase with underscores
+      if (values.type) {
+        values.type = values.type.toUpperCase().replace(/\s+/g, '_');
+      }
       const imageFile = fileList.length > 0 && fileList[0].originFileObj ? fileList[0].originFileObj : null;
       
       if (facility) {
@@ -56,12 +76,18 @@ const FacilityModal = ({ visible, facility, onCancel, onSuccess }) => {
     }
   };
 
+  // Format type label for display (LAB -> Lab, LECTURE_HALL -> Lecture Hall)
+  const formatTypeLabel = (type) => {
+    return type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  };
+
   return (
     <Modal
       title={facility ? 'Edit Facility' : 'Add New Facility'}
       open={visible}
       onCancel={onCancel}
       onOk={() => form.submit()}
+      okButtonProps={{ disabled: submitting }}
       okText={facility ? 'Update' : 'Create'}
       destroyOnClose
     >
@@ -80,17 +106,45 @@ const FacilityModal = ({ visible, facility, onCancel, onSuccess }) => {
 
         <Form.Item
           name="type"
-          label="Type"
-          rules={[{ required: true, message: 'Please select a facility type' }]}
+          label={
+            <span>
+              Type{' '}
+              <span style={{ color: '#888', fontSize: '12px', fontWeight: 'normal' }}>
+                (select existing or type a new one &amp; press Enter)
+              </span>
+            </span>
+          }
+          rules={[{ required: true, message: 'Please select or enter a facility type' }]}
+          getValueFromEvent={(val) => {
+            // mode=tags returns array, grab last value
+            if (Array.isArray(val) && val.length > 0) {
+              return val[val.length - 1];
+            }
+            return val;
+          }}
+          getValueProps={(val) => ({
+            value: val ? [val] : [],
+          })}
         >
-          <Select placeholder="Select type">
-            <Option value="LAB">Laboratory</Option>
-            <Option value="LECTURE_HALL">Lecture Hall</Option>
-            <Option value="MEETING_ROOM">Meeting Room</Option>
-            <Option value="CLASSROOM">Classroom</Option>
-            <Option value="EQUIPMENT">Equipment</Option>
-            <Option value="PC_ROOM">PC Room</Option>
-            <Option value="SPORTS_GROUND">Sports Ground</Option>
+          <Select
+            mode="tags"
+            showSearch
+            allowClear
+            maxTagCount={1}
+            placeholder="Select or type a new facility type..."
+            loading={typesLoading}
+            tokenSeparators={[]}
+            filterOption={(input, option) =>
+              option?.value?.toLowerCase().includes(input.toLowerCase()) ||
+              option?.children?.toLowerCase?.().includes(input.toLowerCase())
+            }
+            style={{ width: '100%' }}
+          >
+            {facilityTypes.map(type => (
+              <Select.Option key={type} value={type}>
+                {formatTypeLabel(type)}
+              </Select.Option>
+            ))}
           </Select>
         </Form.Item>
 

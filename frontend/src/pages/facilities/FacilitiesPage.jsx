@@ -36,6 +36,7 @@ const FacilitiesPage = () => {
   const [searchText, setSearchText] = useState('');
   const [filterType, setFilterType] = useState('ALL');
   const [filterCapacity, setFilterCapacity] = useState(null);
+  const [facilityTypes, setFacilityTypes] = useState([]);
 
   const [selectedFacility, setSelectedFacility] = useState(null);
 
@@ -47,6 +48,7 @@ const FacilitiesPage = () => {
 
   useEffect(() => {
     fetchFacilities();
+    fetchFacilityTypes();
   }, []);
 
   const fetchFacilities = async () => {
@@ -59,6 +61,15 @@ const FacilitiesPage = () => {
       message.error('Failed to fetch facilities');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFacilityTypes = async () => {
+    try {
+      const types = await facilityService.getFacilityTypes();
+      setFacilityTypes(types);
+    } catch (error) {
+      console.error('Error fetching facility types:', error);
     }
   };
 
@@ -153,6 +164,20 @@ const FacilitiesPage = () => {
       key: 'capacity',
       className: 'text-center',
       render: (capacity) => <span className="font-medium">{capacity || 'N/A'}</span>,
+    },
+    {
+      title: 'Health',
+      dataIndex: 'healthScore',
+      key: 'healthScore',
+      render: (health) => (
+        <Tag 
+          color={health === 'EXCELLENT' ? 'success' : health === 'GOOD' ? 'blue' : 'warning'} 
+          icon={health === 'EXCELLENT' ? <CheckCircleOutlined /> : null}
+          className="font-bold border-none px-3 py-1 rounded-full m-0"
+        >
+          {health || 'N/A'}
+        </Tag>
+      ),
     },
     {
       title: 'Status',
@@ -254,13 +279,11 @@ const FacilitiesPage = () => {
               placeholder="Select Type"
             >
               <Option value="ALL">All Categories</Option>
-              <Option value="LAB">Laboratory</Option>
-              <Option value="LECTURE_HALL">Lecture Hall</Option>
-              <Option value="MEETING_ROOM">Meeting Room</Option>
-              <Option value="CLASSROOM">Classroom</Option>
-              <Option value="EQUIPMENT">Equipment</Option>
-              <Option value="PC_ROOM">PC Room</Option>
-              <Option value="SPORTS_GROUND">Sports Ground</Option>
+              {facilityTypes.map(type => (
+                <Option key={type} value={type}>
+                  {type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
+                </Option>
+              ))}
             </Select>
 
             <InputNumber
@@ -387,7 +410,11 @@ const FacilitiesPage = () => {
                         </div>
                         <div className="flex flex-col items-center flex-1">
                           <Text type="secondary" className="text-[10px] uppercase tracking-wider font-bold mb-1">Health Rate</Text>
-                          <Tag color={item.healthScore === 'EXCELLENT' ? 'success' : item.healthScore === 'GOOD' ? 'blue' : 'warning'} className="m-0 border-none rounded-full px-2 text-[10px]">
+                          <Tag 
+                            color={item.healthScore === 'EXCELLENT' ? 'success' : item.healthScore === 'GOOD' ? 'blue' : 'warning'} 
+                            icon={item.healthScore === 'EXCELLENT' ? <CheckCircleOutlined /> : null}
+                            className="font-bold border-none px-3 py-1 rounded-full m-0 text-[10px]"
+                          >
                             {item.healthScore || 'N/A'}
                           </Tag>
                         </div>
@@ -467,17 +494,28 @@ const FacilitiesPage = () => {
             <div className="w-full lg:w-1/2 p-8 md:p-12 overflow-y-auto">
               <div className="flex justify-between items-start mb-2">
                 <Tag color="indigo" className="px-4 py-1 rounded-full font-bold uppercase tracking-wider">{selectedFacility.type?.replace('_', ' ') || 'General'}</Tag>
-                <div className="flex items-center text-gray-400">
-                  <DashboardOutlined className="mr-2" />
-                  <span className="font-semibold">{selectedFacility.healthScore || 'GOOD'}</span>
+                <div className="flex items-center">
+                  <Tag 
+                    color={selectedFacility.healthScore === 'EXCELLENT' || !selectedFacility.healthScore ? 'success' : 'processing'} 
+                    icon={selectedFacility.healthScore === 'EXCELLENT' || !selectedFacility.healthScore ? <CheckCircleOutlined /> : null}
+                    className="font-bold border-none px-3 py-1 rounded-full m-0"
+                  >
+                    {selectedFacility.healthScore || 'EXCELLENT'}
+                  </Tag>
                 </div>
               </div>
 
               <Title level={1} className="!mt-0 !mb-4 text-3xl font-extrabold text-gray-900">{selectedFacility.name}</Title>
 
-              <div className="flex items-center text-gray-500 text-lg mb-8">
-                <EnvironmentOutlined className="mr-2 text-indigo-500" />
-                <span>{selectedFacility.location || 'Location not specified'}</span>
+              <div className="flex flex-col mb-8">
+                <div className="flex items-center text-gray-500 text-lg">
+                  <EnvironmentOutlined className="mr-2 text-indigo-500" />
+                  <span>{selectedFacility.location || 'Location not specified'}</span>
+                </div>
+                <div className="flex items-center text-gray-400 text-xs mt-2 ml-1">
+                  <CalendarOutlined className="mr-1 text-[10px]" />
+                  <span>⏱ Last Updated: Today</span>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-6 mb-8">
@@ -497,9 +535,33 @@ const FacilitiesPage = () => {
                   <div>
                     <div className="text-xs text-emerald-400 font-bold uppercase">Utilization</div>
                     <div className="text-xl font-bold text-gray-800">{selectedFacility.utilizationPercentage?.toFixed(1) || 0}%</div>
+                    <div className="text-[10px] font-bold mt-1 uppercase tracking-tighter">
+                      {selectedFacility.utilizationPercentage <= 30 || !selectedFacility.utilizationPercentage ? (
+                        <span className="text-amber-500">Low Usage ⚠️</span>
+                      ) : selectedFacility.utilizationPercentage <= 70 ? (
+                        <span className="text-blue-500">Medium Usage</span>
+                      ) : (
+                        <span className="text-emerald-500">High Usage</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* Smart Recommendation Box */}
+              {(selectedFacility.utilizationPercentage <= 30 || !selectedFacility.utilizationPercentage) && (
+                <div className="mb-8 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center justify-between animate-pulse">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-emerald-500 text-white p-2 rounded-lg">
+                      <CheckCircleOutlined />
+                    </div>
+                    <div>
+                      <div className="text-emerald-700 font-bold text-sm">Recommended Now ✅</div>
+                      <div className="text-emerald-600 text-xs">Low usage – Available for booking</div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="mb-8">
                 <Title level={4} className="!mb-3">Overview</Title>
@@ -599,6 +661,7 @@ const FacilitiesPage = () => {
         onSuccess={() => {
           setFacilityModalVisible(false);
           fetchFacilities();
+          fetchFacilityTypes(); // Refresh types after add/edit
         }}
       />
     </div>

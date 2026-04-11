@@ -8,6 +8,7 @@ import { usePushNotifications } from './hooks/usePushNotifications';
 // Auth Pages
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import PortalTerms from './pages/auth/PortalTerms';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import OAuth2Callback from './pages/auth/OAuth2Callback';
@@ -42,6 +43,7 @@ function App() {
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/portal-terms" element={<PortalTerms />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
             <Route path="/oauth2/callback" element={<OAuth2Callback />} />

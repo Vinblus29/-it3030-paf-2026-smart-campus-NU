@@ -19,7 +19,7 @@ const messaging = firebase.messaging();
 
 // Force immediate activation
 self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", () => clients.claim());
+self.addEventListener("activate", () => self.clients.claim());
 
 // Handle background push messages
 messaging.onBackgroundMessage((payload) => {
@@ -61,7 +61,7 @@ self.addEventListener("notificationclick", (event) => {
     const targetUrl = event.notification.data?.url || '/notifications';
 
     event.waitUntil(
-        clients.matchAll({ type: "window", includeUncontrolled: true })
+        self.clients.matchAll({ type: "window", includeUncontrolled: true })
             .then((clientList) => {
                 // Try to focus existing tab with matching URL
                 for (const client of clientList) {
@@ -70,8 +70,8 @@ self.addEventListener("notificationclick", (event) => {
                     }
                 }
                 // Open new tab if none found
-                if (clients.openWindow) {
-                    return clients.openWindow(targetUrl);
+                if (self.clients.openWindow) {
+                    return self.clients.openWindow(targetUrl);
                 }
             })
     );

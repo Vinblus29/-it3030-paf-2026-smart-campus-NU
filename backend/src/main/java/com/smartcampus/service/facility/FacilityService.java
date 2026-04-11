@@ -20,23 +20,33 @@ public class FacilityService {
     private final com.smartcampus.repository.BlackoutPeriodRepository blackoutPeriodRepository;
     private final com.smartcampus.repository.MaintenanceTicketRepository maintenanceTicketRepository;
     private final com.smartcampus.service.S3Service s3Service;
+    private final com.smartcampus.service.notification.NotificationService notificationService;
+    private final com.smartcampus.service.notification.PushNotificationService pushNotificationService;
 
     public FacilityService(FacilityRepository facilityRepository,
                            com.smartcampus.repository.BookingRepository bookingRepository,
                            com.smartcampus.repository.BlackoutPeriodRepository blackoutPeriodRepository,
                            com.smartcampus.repository.MaintenanceTicketRepository maintenanceTicketRepository,
-                           com.smartcampus.service.S3Service s3Service) {
+                           com.smartcampus.service.S3Service s3Service,
+                           com.smartcampus.service.notification.NotificationService notificationService,
+                           com.smartcampus.service.notification.PushNotificationService pushNotificationService) {
         this.facilityRepository = facilityRepository;
         this.bookingRepository = bookingRepository;
         this.blackoutPeriodRepository = blackoutPeriodRepository;
         this.maintenanceTicketRepository = maintenanceTicketRepository;
         this.s3Service = s3Service;
+        this.notificationService = notificationService;
+        this.pushNotificationService = pushNotificationService;
     }
 
     public List<FacilityDTO> getAllFacilities() {
         return facilityRepository.findAll().stream()
             .map(this::mapToDTO)
             .collect(Collectors.toList());
+    }
+
+    public List<String> getAllTypes() {
+        return facilityRepository.findDistinctTypes();
     }
 
     public List<FacilityDTO> getAvailableFacilities() {
@@ -82,6 +92,13 @@ public class FacilityService {
         facility.setCreatedAt(LocalDateTime.now());
 
         facility = facilityRepository.save(facility);
+
+        // Send Notification to all users
+        String title = "New Facility Added!";
+        String message = "A new facility '" + facility.getName() + "' is now available at " + facility.getLocation();
+        notificationService.notifyAllUsers(title, message, "FACILITY", "FACILITY", facility.getId());
+        pushNotificationService.broadcastToAll(title, message);
+
         return mapToDTO(facility);
     }
 

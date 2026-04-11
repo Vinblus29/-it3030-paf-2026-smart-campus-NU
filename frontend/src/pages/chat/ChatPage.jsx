@@ -47,7 +47,7 @@ const ChatPage = () => {
     useEffect(() => {
         fetchInitialData();
         if (user?.role === 'ADMIN') fetchAllUsers();
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         if (!user) return;
@@ -55,7 +55,7 @@ const ChatPage = () => {
         return () => {
             if (client) client.deactivate();
         };
-    }, [groups.length]);
+    }, [groups.length, user]);
 
     useEffect(() => {
         if (selectedChat) {

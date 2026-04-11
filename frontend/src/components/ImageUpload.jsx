@@ -77,7 +77,7 @@ const ImageUpload = ({
       onChange?.(newImages);
 
       message.success(`${file.name} uploaded successfully`);
-    } catch (error) {
+    } catch (_error) {
       message.error(`${file.name} upload failed`);
     } finally {
       setUploading(false);

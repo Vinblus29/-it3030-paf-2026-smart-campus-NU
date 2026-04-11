@@ -23,5 +23,8 @@ public interface FacilityRepository extends JpaRepository<Facility, Long> {
            "LOWER(f.description) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "LOWER(f.type) LIKE LOWER(CONCAT('%', :query, '%'))")
     List<Facility> searchFacilities(@Param("query") String query);
+
+    @Query("SELECT DISTINCT f.type FROM Facility f WHERE f.type IS NOT NULL ORDER BY f.type")
+    List<String> findDistinctTypes();
 }
 

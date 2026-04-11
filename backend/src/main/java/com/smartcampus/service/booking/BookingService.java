@@ -153,6 +153,57 @@ public class BookingService {
         return mapToDTO(booking);
     }
 
+    @Transactional
+    public BookingDTO updateBooking(Long id, BookingRequest request) {
+        Booking booking = bookingRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (!"PENDING".equals(booking.getStatus()) && !"APPROVED".equals(booking.getStatus())) {
+            throw new RuntimeException("Only pending or approved bookings can be edited");
+        }
+
+        Facility facility = facilityRepository.findById(request.getFacilityId())
+            .orElseThrow(() -> new RuntimeException("Facility not found"));
+
+        if (request.getNumberOfPeople() > facility.getCapacity()) {
+            throw new RuntimeException("Number of people exceeds facility capacity (" + facility.getCapacity() + ")");
+        }
+
+        LocalDateTime bufferedStart = request.getStartTime().minusMinutes(15);
+        LocalDateTime bufferedEnd = request.getEndTime().plusMinutes(15);
+        
+        List<Booking> conflicts = bookingRepository.findConflictingBookings(
+            request.getFacilityId(), 
+            bufferedStart, 
+            bufferedEnd
+        ).stream()
+            .filter(b -> !b.getId().equals(id))
+            .collect(Collectors.toList());
+
+        if (!conflicts.isEmpty()) {
+            String suggestedSlots = suggestAlternativeSlots(facility.getId(), request.getStartTime(), 60);
+            throw new RuntimeException("Time slot is already booked (including 15m buffer). Suggested slots: " + suggestedSlots);
+        }
+
+        booking.setFacility(facility);
+        booking.setStartTime(request.getStartTime());
+        booking.setEndTime(request.getEndTime());
+        booking.setPurpose(request.getPurpose());
+        booking.setNumberOfPeople(request.getNumberOfPeople());
+        booking.setUpdatedAt(LocalDateTime.now());
+
+        if ("APPROVED".equals(booking.getStatus())) {
+            booking.setStatus("PENDING");
+        }
+
+        booking = bookingRepository.save(booking);
+
+        createNotification(booking.getUser(), "Booking Updated",
+            "Your booking for " + booking.getFacility().getName() + " has been updated and is pending re-approval.", "BOOKING");
+
+        return mapToDTO(booking);
+    }
+
     private BookingDTO createRecurringBookings(BookingRequest request, Facility facility, User user, String groupId) {
         LocalDateTime currentStart = request.getStartTime();
         LocalDateTime currentEnd = request.getEndTime();
@@ -257,11 +308,13 @@ public class BookingService {
             throw new RuntimeException("Only pending bookings can be approved");
         }
 
-        // Check for conflicts with APPROVED bookings again to be sure
+        // Bug #5 Fix: Use same 15-min buffer as createBooking for consistency
+        LocalDateTime bufferedStart = booking.getStartTime().minusMinutes(15);
+        LocalDateTime bufferedEnd = booking.getEndTime().plusMinutes(15);
         List<Booking> conflicts = bookingRepository.findConflictingBookings(
             booking.getFacility().getId(),
-            booking.getStartTime(),
-            booking.getEndTime()
+            bufferedStart,
+            bufferedEnd
         );
 
         if (!conflicts.isEmpty()) {
@@ -343,7 +396,7 @@ public class BookingService {
             "🚫 Booking Cancelled",
             "Your booking for " + booking.getFacility().getName() + " has been cancelled.");
 
-        // Feature 3: Auto-promote waitlisted booking if approved booking gets cancelled
+        // Bug #8 Fix: Promote from waitlist on ANY cancellation (PENDING or APPROVED)
         promoteFromWaitlist(booking.getFacility(), booking.getStartTime(), booking.getEndTime());
 
         return mapToDTO(booking);
@@ -383,9 +436,9 @@ public class BookingService {
 
     @Transactional
     public BookingDTO checkInByToken(String token) {
-        Booking booking = bookingRepository.findAll().stream()
-            .filter(b -> token.equals(b.getQrToken()) && "APPROVED".equals(b.getStatus()))
-            .findFirst()
+        // Bug #2 Fix: Use direct DB lookup instead of O(n) full table scan
+        Booking booking = bookingRepository.findByQrToken(token)
+            .filter(b -> "APPROVED".equals(b.getStatus()))
             .orElseThrow(() -> new RuntimeException("Invalid QR Token or booking not approved"));
 
         return checkIn(booking.getId());
