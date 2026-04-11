@@ -346,7 +346,17 @@ const Register = () => {
             <div style={{ display: currentStep === 3 ? 'block' : 'none' }}>
               <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>Security Setup</h3>
               <p style={{ color: '#888', fontSize: 13, marginBottom: 20 }}>Set a strong password for your university portal.</p>
-              <Form.Item name="password" label="Password" rules={[{ required: true, min: 6 }]}>
+              <Form.Item 
+                name="password" 
+                label="Password" 
+                rules={[
+                  { required: true, message: 'Password is required' },
+                  {
+                    pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[a-zA-Z\d@$!%*?&]{8,}$/,
+                    message: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)'
+                  }
+                ]}
+              >
                 <Input.Password prefix={<LockOutlined />} placeholder="••••••••" />
               </Form.Item>
               <Form.Item name="confirmPassword" label="Confirm Password" dependencies={['password']} rules={[

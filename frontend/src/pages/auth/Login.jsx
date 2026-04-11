@@ -176,7 +176,13 @@ const Login = () => {
             </Form.Item>
 
             <Form.Item name="password" style={{ marginBottom: 8 }}
-              rules={[{ required: true, message: 'Password is required' }]}>
+              rules={[
+                { required: true, message: 'Password is required' },
+                {
+                  pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[a-zA-Z\d@$!%*?&]{8,}$/,
+                  message: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)'
+                }
+              ]}>
               <Input.Password prefix={<LockOutlined style={{ color: '#9aaab8' }} />}
                 placeholder="Password"
                 style={{ height: 44, borderRadius: 7, borderColor: '#e0e5ec' }}
