@@ -9,6 +9,7 @@ import {
   EditOutlined, DeleteOutlined, SendOutlined, SearchOutlined, ClearOutlined
 } from '@ant-design/icons';
 import ticketService from '../../services/ticketService';
+import facilityService from '../../services/facilityService';
 import { TICKET_CATEGORIES } from '../../constants/ticketCategories';
 
 const { Option } = Select;
@@ -32,6 +33,7 @@ export default function MyTicketsPage() {
   const [editText, setEditText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [fileList, setFileList] = useState([]);
+  const [facilities, setFacilities] = useState([]);
   const [form] = Form.useForm();
 
   const [searchText, setSearchText] = useState('');
@@ -39,6 +41,12 @@ export default function MyTicketsPage() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
   const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    facilityService.getAllFacilities()
+      .then(data => setFacilities(data))
+      .catch(() => {});
+  }, []);
 
   // Initial load and filter changes — debounce only text search
   useEffect(() => {
@@ -101,6 +109,11 @@ export default function MyTicketsPage() {
     setCommentText('');
     setEditingComment(null);
   };
+
+  const locationOptions = facilities.map(f => ({
+    value: f.name + (f.location ? ` — ${f.location}` : ''),
+    label: f.name + (f.location ? ` — ${f.location}` : '') + (f.type ? ` (${f.type})` : ''),
+  }));
 
   const handleCreate = async (values) => {
     setSubmitting(true);
@@ -291,7 +304,14 @@ export default function MyTicketsPage() {
             </Form.Item>
           </div>
           <Form.Item name="location" label="Location / Resource" rules={[{ required: true, message: 'Location is required' }]}>
-            <Input placeholder="e.g. Lab A, Room 201, Projector #3" />
+            <Select
+              placeholder="Select a facility or location"
+              showSearch
+              filterOption={(input, option) =>
+                option.label.toLowerCase().includes(input.toLowerCase())
+              }
+              options={locationOptions}
+            />
           </Form.Item>
           <Form.Item name="description" label="Description" rules={[{ required: true, message: 'Description is required' }]}>
             <TextArea rows={4} placeholder="Describe the incident in detail" />
