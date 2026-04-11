@@ -54,27 +54,28 @@ export default function MyTicketsPage() {
   // Initial load and filter changes — debounce only text search
   useEffect(() => {
     if (!searchText) {
-      fetchTickets();
+      fetchTickets(searchText, filterStatus, filterCategory, filterPriority);
       return;
     }
-    const timer = setTimeout(() => { fetchTickets(); }, 400);
+    const timer = setTimeout(() => {
+      fetchTickets(searchText, filterStatus, filterCategory, filterPriority);
+    }, 400);
     return () => clearTimeout(timer);
   }, [searchText, filterStatus, filterCategory, filterPriority]);
 
-  const fetchTickets = async () => {
+  const fetchTickets = async (q = '', status = '', category = '', priority = '') => {
     try {
       setSearching(true);
-      const hasFilters = searchText || filterStatus || filterCategory || filterPriority;
+      const hasFilters = q || status || category || priority;
       const data = hasFilters
         ? await ticketService.searchTickets({
-            q: searchText || undefined,
-            status: filterStatus || undefined,
-            category: filterCategory || undefined,
-            priority: filterPriority || undefined,
+            q: q || undefined,
+            status: status || undefined,
+            category: category || undefined,
+            priority: priority || undefined,
           })
         : await ticketService.getMyTickets();
       setTickets(data);
-      // keep unfiltered copy for stats — only update when no filters active
       if (!hasFilters) setAllTickets(data);
     } catch { message.error('Failed to load tickets'); }
     finally { setLoading(false); setSearching(false); }
@@ -136,7 +137,7 @@ export default function MyTicketsPage() {
       form.resetFields();
       setFileList([]);
       setPreviewImage('');
-      fetchTickets();
+      fetchTickets('', '', '', ''); // reload all after create
     } catch (e) {
       message.error(e?.response?.data?.message || 'Failed to create ticket');
     } finally { setSubmitting(false); }
