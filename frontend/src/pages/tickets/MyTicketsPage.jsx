@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Card, Table, Button, Tag, Modal, message, Drawer, Descriptions,
   Form, Input, Select, Upload, Space, List, Avatar, Popconfirm,
-  Empty, Typography, Row, Col, Statistic, Image
+  Empty, Typography, Row, Col, Statistic, Image, Timeline
 } from 'antd';
 import {
   PlusOutlined, EyeOutlined, UploadOutlined, UserOutlined,
@@ -36,6 +36,7 @@ export default function MyTicketsPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
   const [facilities, setFacilities] = useState([]);
+  const [activity, setActivity] = useState([]);
   const [form] = Form.useForm();
 
   const [searchText, setSearchText] = useState('');
@@ -97,8 +98,13 @@ export default function MyTicketsPage() {
     setSelected(ticket);
     setDrawerOpen(true);
     try {
-      setComments(await ticketService.getComments(ticket.id));
-    } catch { message.error('Failed to load comments'); }
+      const [commentsData, activityData] = await Promise.all([
+        ticketService.getComments(ticket.id),
+        ticketService.getActivity(ticket.id),
+      ]);
+      setComments(commentsData);
+      setActivity(activityData);
+    } catch { message.error('Failed to load ticket details'); }
   };
 
   const closeDrawer = () => {
@@ -107,6 +113,7 @@ export default function MyTicketsPage() {
     setComments([]);
     setCommentText('');
     setEditingComment(null);
+    setActivity([]);
   };
 
   const handlePreview = async (file) => {
@@ -127,9 +134,12 @@ export default function MyTicketsPage() {
     try {
       const selectedFacility = facilities.find(f => f.id === values.facilityId);
       const payload = {
-        ...values,
-        location: selectedFacility?.name || values.location,
-        facilityId: values.facilityId
+        title: values.title,
+        category: values.category,
+        priority: values.priority,
+        location: selectedFacility ? selectedFacility.name : values.facilityId,
+        description: values.description,
+        contactDetails: values.contactDetails,
       };
       const images = fileList.map(f => f.originFileObj).filter(Boolean);
       await ticketService.createTicket(payload, images);
@@ -464,7 +474,34 @@ export default function MyTicketsPage() {
               )}
             </Descriptions>
 
-            {/* Comments — users can add/edit/delete their own */}
+            {/* Activity Timeline */}
+            {activity.length > 0 && (
+              <div>
+                <Text strong className="text-base">Status Timeline</Text>
+                <Timeline
+                  className="mt-3"
+                  items={activity.map(a => ({
+                    color:
+                      a.action === 'CREATED' ? 'green' :
+                      a.action === 'STATUS_CHANGED' ? 'blue' :
+                      a.action === 'ASSIGNED' ? 'orange' :
+                      a.action === 'PRIORITY_CHANGED' ? 'red' : 'gray',
+                    children: (
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#444' }}>
+                          {a.detail}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
+                          {new Date(a.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+                    )
+                  }))}
+                />
+              </div>
+            )}
+
+            {/* Comments */}
             <div>
               <Text strong className="text-base">Comments</Text>
               <List

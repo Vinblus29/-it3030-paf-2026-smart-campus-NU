@@ -98,6 +98,30 @@ public class TicketController {
         return service.assignTicket(id, body.get("assigneeId"));
     }
 
+    @GetMapping("/{id}/activity")
+    public List<Map<String, Object>> getActivity(@PathVariable Long id) {
+        TicketResponse t = service.getTicketById(id);
+        List<Map<String, Object>> timeline = new java.util.ArrayList<>();
+        if (t.getCreatedAt() != null)
+            timeline.add(Map.of("action", "CREATED", "detail", "Ticket submitted", "createdAt", t.getCreatedAt()));
+        if (t.getAssignedAt() != null)
+            timeline.add(Map.of("action", "ASSIGNED", "detail",
+                t.getAssigneeName() != null ? "Assigned to " + t.getAssigneeName() : "Ticket assigned",
+                "createdAt", t.getAssignedAt()));
+        if (t.getInProgressAt() != null)
+            timeline.add(Map.of("action", "STATUS_CHANGED", "detail", "Status changed to In Progress", "createdAt", t.getInProgressAt()));
+        if (t.getResolvedAt() != null)
+            timeline.add(Map.of("action", "STATUS_CHANGED", "detail", "Ticket resolved", "createdAt", t.getResolvedAt()));
+        if (t.getClosedAt() != null)
+            timeline.add(Map.of("action", "STATUS_CHANGED", "detail", "Ticket closed", "createdAt", t.getClosedAt()));
+        if (t.getRejectedAt() != null)
+            timeline.add(Map.of("action", "STATUS_CHANGED", "detail",
+                t.getRejectionReason() != null ? "Ticket rejected: " + t.getRejectionReason() : "Ticket rejected",
+                "createdAt", t.getRejectedAt()));
+        timeline.sort(java.util.Comparator.comparing(m -> (java.time.LocalDateTime) m.get("createdAt")));
+        return timeline;
+    }
+
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         service.deleteTicket(id);

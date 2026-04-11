@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Card, Table, Button, Tag, Modal, message, Drawer, Descriptions,
-  Select, Space, Tabs, Form, Input, List, Avatar, Popconfirm, Typography, Image
+  Select, Space, Tabs, Form, Input, List, Avatar, Popconfirm, Typography, Image, Timeline
 } from 'antd';
 import { EyeOutlined, UserOutlined, EditOutlined, DeleteOutlined, SendOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
@@ -26,6 +26,7 @@ export default function TicketsPage() {
   const [selected, setSelected] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [comments, setComments] = useState([]);
+  const [activity, setActivity] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [editingComment, setEditingComment] = useState(null);
   const [editText, setEditText] = useState('');
@@ -55,21 +56,24 @@ export default function TicketsPage() {
     finally { setLoading(false); }
   };
 
-  const fetchComments = async (ticketId) => {
-    try { setComments(await ticketService.getComments(ticketId)); }
-    catch { message.error('Failed to load comments'); }
-  };
-
   const handleView = async (ticket) => {
     setSelected(ticket);
     setDrawerOpen(true);
-    await fetchComments(ticket.id);
+    try {
+      const [commentsData, activityData] = await Promise.all([
+        ticketService.getComments(ticket.id),
+        ticketService.getActivity(ticket.id),
+      ]);
+      setComments(commentsData);
+      setActivity(activityData);
+    } catch { message.error('Failed to load ticket details'); }
   };
 
   const closeDrawer = () => {
     setDrawerOpen(false);
     setSelected(null);
     setComments([]);
+    setActivity([]);
     setCommentText('');
     setEditingComment(null);
   };
@@ -398,6 +402,30 @@ export default function TicketsPage() {
                     ))}
                   </div>
                 </Image.PreviewGroup>
+              </div>
+            )}
+
+            {/* Status Timeline */}
+            {activity.length > 0 && (
+              <div>
+                <Text strong className="text-base">Status Timeline</Text>
+                <Timeline
+                  className="mt-3"
+                  items={activity.map(a => ({
+                    color:
+                      a.action === 'CREATED' ? 'green' :
+                      a.action === 'ASSIGNED' ? 'orange' :
+                      a.action === 'STATUS_CHANGED' ? 'blue' : 'gray',
+                    children: (
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#444' }}>{a.detail}</div>
+                        <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
+                          {new Date(a.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+                    )
+                  }))}
+                />
               </div>
             )}
 

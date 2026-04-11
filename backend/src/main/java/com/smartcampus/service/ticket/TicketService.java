@@ -242,6 +242,15 @@ public class TicketService {
         if (newStatus == TicketStatus.RESOLVED) {
             ticket.setResolvedAt(LocalDateTime.now());
         }
+        if (newStatus == TicketStatus.IN_PROGRESS && ticket.getInProgressAt() == null) {
+            ticket.setInProgressAt(LocalDateTime.now());
+        }
+        if (newStatus == TicketStatus.CLOSED) {
+            ticket.setClosedAt(LocalDateTime.now());
+        }
+        if (newStatus == TicketStatus.REJECTED) {
+            ticket.setRejectedAt(LocalDateTime.now());
+        }
 
         Ticket saved = ticketRepository.save(ticket);
 
@@ -318,8 +327,10 @@ public class TicketService {
         }
 
         ticket.setAssignee(assignee);
+        ticket.setAssignedAt(LocalDateTime.now());
         if (ticket.getStatus() == TicketStatus.OPEN) {
             ticket.setStatus(TicketStatus.IN_PROGRESS);
+            if (ticket.getInProgressAt() == null) ticket.setInProgressAt(LocalDateTime.now());
         }
 
         Ticket saved = ticketRepository.save(ticket);
@@ -366,6 +377,10 @@ public class TicketService {
         res.setResolutionNotes(t.getResolutionNotes());
         res.setRejectionReason(t.getRejectionReason());
         res.setResolvedAt(t.getResolvedAt());
+        res.setAssignedAt(t.getAssignedAt());
+        res.setInProgressAt(t.getInProgressAt());
+        res.setClosedAt(t.getClosedAt());
+        res.setRejectedAt(t.getRejectedAt());
         res.setCreatedAt(t.getCreatedAt());
         res.setUpdatedAt(t.getUpdatedAt());
         res.setFacilityId(t.getFacilityId());

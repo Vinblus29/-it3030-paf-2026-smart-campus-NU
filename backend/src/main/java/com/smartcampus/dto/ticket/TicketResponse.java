@@ -24,6 +24,10 @@ public class TicketResponse {
     private Long assigneeId;
     private String assigneeName;
     private LocalDateTime resolvedAt;
+    private LocalDateTime assignedAt;
+    private LocalDateTime inProgressAt;
+    private LocalDateTime closedAt;
+    private LocalDateTime rejectedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Long resolutionTimeHours;
@@ -64,6 +68,14 @@ public class TicketResponse {
     public void setAssigneeName(String assigneeName) { this.assigneeName = assigneeName; }
     public LocalDateTime getResolvedAt() { return resolvedAt; }
     public void setResolvedAt(LocalDateTime resolvedAt) { this.resolvedAt = resolvedAt; }
+    public LocalDateTime getAssignedAt() { return assignedAt; }
+    public void setAssignedAt(LocalDateTime assignedAt) { this.assignedAt = assignedAt; }
+    public LocalDateTime getInProgressAt() { return inProgressAt; }
+    public void setInProgressAt(LocalDateTime inProgressAt) { this.inProgressAt = inProgressAt; }
+    public LocalDateTime getClosedAt() { return closedAt; }
+    public void setClosedAt(LocalDateTime closedAt) { this.closedAt = closedAt; }
+    public LocalDateTime getRejectedAt() { return rejectedAt; }
+    public void setRejectedAt(LocalDateTime rejectedAt) { this.rejectedAt = rejectedAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

@@ -59,6 +59,11 @@ const ticketService = {
     return axios.get(`${API_URL}/${ticketId}/comments`).then(r => r.data);
   },
 
+  getActivity: (ticketId) => {
+    if (!Number.isInteger(Number(ticketId)) || Number(ticketId) <= 0) throw new Error(`Invalid ticket id: ${ticketId}`);
+    return axios.get(`${API_URL}/${ticketId}/activity`).then(r => r.data);
+  },
+
   addComment: (ticketId, content) => {
     if (!Number.isInteger(Number(ticketId)) || Number(ticketId) <= 0) throw new Error(`Invalid ticket id: ${ticketId}`);
     return axios.post(`${API_URL}/${ticketId}/comments`, { content }).then(r => r.data);
