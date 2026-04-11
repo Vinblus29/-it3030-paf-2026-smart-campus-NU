@@ -79,6 +79,11 @@ const facilityService = {
       params: { tags: tags.join(',') }
     });
     return response.data;
+  },
+
+  getFacilityTypes: async () => {
+    const response = await axios.get(`${API_URL}/types`);
+    return response.data;
   }
 };
 

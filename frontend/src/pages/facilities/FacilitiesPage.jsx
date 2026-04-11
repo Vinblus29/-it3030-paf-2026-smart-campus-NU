@@ -36,6 +36,7 @@ const FacilitiesPage = () => {
   const [searchText, setSearchText] = useState('');
   const [filterType, setFilterType] = useState('ALL');
   const [filterCapacity, setFilterCapacity] = useState(null);
+  const [facilityTypes, setFacilityTypes] = useState([]);
 
   const [selectedFacility, setSelectedFacility] = useState(null);
 
@@ -47,6 +48,7 @@ const FacilitiesPage = () => {
 
   useEffect(() => {
     fetchFacilities();
+    fetchFacilityTypes();
   }, []);
 
   const fetchFacilities = async () => {
@@ -59,6 +61,15 @@ const FacilitiesPage = () => {
       message.error('Failed to fetch facilities');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFacilityTypes = async () => {
+    try {
+      const types = await facilityService.getFacilityTypes();
+      setFacilityTypes(types);
+    } catch (error) {
+      console.error('Error fetching facility types:', error);
     }
   };
 
@@ -153,6 +164,20 @@ const FacilitiesPage = () => {
       key: 'capacity',
       className: 'text-center',
       render: (capacity) => <span className="font-medium">{capacity || 'N/A'}</span>,
+    },
+    {
+      title: 'Health',
+      dataIndex: 'healthScore',
+      key: 'healthScore',
+      render: (health) => (
+        <Tag 
+          color={health === 'EXCELLENT' ? 'success' : health === 'GOOD' ? 'blue' : 'warning'} 
+          icon={health === 'EXCELLENT' ? <CheckCircleOutlined /> : null}
+          className="font-bold border-none px-3 py-1 rounded-full m-0"
+        >
+          {health || 'N/A'}
+        </Tag>
+      ),
     },
     {
       title: 'Status',
@@ -254,13 +279,11 @@ const FacilitiesPage = () => {
               placeholder="Select Type"
             >
               <Option value="ALL">All Categories</Option>
-              <Option value="LAB">Laboratory</Option>
-              <Option value="LECTURE_HALL">Lecture Hall</Option>
-              <Option value="MEETING_ROOM">Meeting Room</Option>
-              <Option value="CLASSROOM">Classroom</Option>
-              <Option value="EQUIPMENT">Equipment</Option>
-              <Option value="PC_ROOM">PC Room</Option>
-              <Option value="SPORTS_GROUND">Sports Ground</Option>
+              {facilityTypes.map(type => (
+                <Option key={type} value={type}>
+                  {type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
+                </Option>
+              ))}
             </Select>
 
             <InputNumber
@@ -387,7 +410,11 @@ const FacilitiesPage = () => {
                         </div>
                         <div className="flex flex-col items-center flex-1">
                           <Text type="secondary" className="text-[10px] uppercase tracking-wider font-bold mb-1">Health Rate</Text>
-                          <Tag color={item.healthScore === 'EXCELLENT' ? 'success' : item.healthScore === 'GOOD' ? 'blue' : 'warning'} className="m-0 border-none rounded-full px-2 text-[10px]">
+                          <Tag 
+                            color={item.healthScore === 'EXCELLENT' ? 'success' : item.healthScore === 'GOOD' ? 'blue' : 'warning'} 
+                            icon={item.healthScore === 'EXCELLENT' ? <CheckCircleOutlined /> : null}
+                            className="font-bold border-none px-3 py-1 rounded-full m-0 text-[10px]"
+                          >
                             {item.healthScore || 'N/A'}
                           </Tag>
                         </div>
@@ -634,6 +661,7 @@ const FacilitiesPage = () => {
         onSuccess={() => {
           setFacilityModalVisible(false);
           fetchFacilities();
+          fetchFacilityTypes(); // Refresh types after add/edit
         }}
       />
     </div>
