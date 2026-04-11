@@ -9,6 +9,7 @@ import {
   EditOutlined, DeleteOutlined, SendOutlined, SearchOutlined, ClearOutlined
 } from '@ant-design/icons';
 import ticketService from '../../services/ticketService';
+import facilityService from '../../services/facilityService';
 import { TICKET_CATEGORIES } from '../../constants/ticketCategories';
 
 const { Option } = Select;
@@ -34,6 +35,7 @@ export default function MyTicketsPage() {
   const [fileList, setFileList] = useState([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
+  const [facilities, setFacilities] = useState([]);
   const [form] = Form.useForm();
 
   const [searchText, setSearchText] = useState('');
@@ -41,6 +43,13 @@ export default function MyTicketsPage() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
   const [searching, setSearching] = useState(false);
+
+  // Fetch facilities for location dropdown
+  useEffect(() => {
+    facilityService.getAllFacilities()
+      .then(data => setFacilities(data))
+      .catch(() => {});
+  }, []);
 
   // Initial load and filter changes — debounce only text search
   useEffect(() => {
@@ -312,7 +321,30 @@ export default function MyTicketsPage() {
             </Form.Item>
           </div>
           <Form.Item name="location" label="Location / Resource" rules={[{ required: true, message: 'Location is required' }]}>
-            <Input placeholder="e.g. Lab A, Room 201, Projector #3" />
+            <Select
+              showSearch
+              placeholder="Select a facility"
+              optionFilterProp="label"
+              filterOption={(input, option) =>
+                option.label.toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {facilities.map(f => (
+                <Option
+                  key={f.id}
+                  value={f.name}
+                  label={`${f.name}${f.location ? ' ' + f.location : ''}`}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>
+                      <span style={{ fontWeight: 500 }}>{f.name}</span>
+                      {f.location && <span style={{ color: '#888', marginLeft: 6, fontSize: 12 }}>{f.location}</span>}
+                    </span>
+                    {f.type && <Tag style={{ marginLeft: 8, fontSize: 10 }}>{f.type}</Tag>}
+                  </div>
+                </Option>
+              ))}
+            </Select>
           </Form.Item>
           <Form.Item name="description" label="Description" rules={[{ required: true, message: 'Description is required' }]}>
             <TextArea rows={4} placeholder="Describe the incident in detail" />
