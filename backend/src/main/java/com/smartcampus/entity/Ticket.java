@@ -56,6 +56,8 @@ public class Ticket {
 
     private LocalDateTime updatedAt;
 
+    private LocalDateTime lastEscalatedAt;
+
     @PrePersist
     public void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -105,5 +107,8 @@ public class Ticket {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public LocalDateTime getLastEscalatedAt() { return lastEscalatedAt; }
+    public void setLastEscalatedAt(LocalDateTime lastEscalatedAt) { this.lastEscalatedAt = lastEscalatedAt; }
+
 }
 

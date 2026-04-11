@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Card, Table, Button, Tag, Modal, message, Drawer, Descriptions,
-  Select, Space, Tabs, Form, Input, List, Avatar, Popconfirm, Typography
+  Select, Space, Tabs, Form, Input, List, Avatar, Popconfirm, Typography, Image
 } from 'antd';
 import { EyeOutlined, UserOutlined, EditOutlined, DeleteOutlined, SendOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
@@ -148,7 +148,12 @@ export default function TicketsPage() {
       title: 'Ticket', dataIndex: 'title', key: 'title',
       render: (text, r) => (
         <div>
-          <div className="font-medium">{text}</div>
+          <div className="font-medium">
+            {text}
+            {r.escalated && (
+              <Tag color="volcano" style={{ marginLeft: 6, fontSize: 10 }}>ESCALATED</Tag>
+            )}
+          </div>
           <Text type="secondary" className="text-xs">{r.category} · {r.location}</Text>
         </div>
       )
@@ -296,18 +301,30 @@ export default function TicketsPage() {
               <Descriptions.Item label="Created">
                 {selected.createdAt ? new Date(selected.createdAt).toLocaleString() : '—'}
               </Descriptions.Item>
+              {selected.escalated && (
+                <Descriptions.Item label="Auto-Escalated">
+                  <Tag color="volcano">Priority was automatically escalated due to inactivity</Tag>
+                </Descriptions.Item>
+              )}
             </Descriptions>
 
             {selected.imageUrls?.length > 0 && (
               <div>
                 <Text strong>Evidence Images</Text>
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  {selected.imageUrls.map((url, i) => (
-                    <a key={i} href={url} target="_blank" rel="noreferrer">
-                      <img src={url} alt={`evidence-${i}`} className="w-24 h-24 object-cover rounded border" />
-                    </a>
-                  ))}
-                </div>
+                <Image.PreviewGroup>
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    {selected.imageUrls.map((url, i) => (
+                      <Image
+                        key={i}
+                        src={url}
+                        alt={`evidence-${i}`}
+                        width={96}
+                        height={96}
+                        style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #d9d9d9', cursor: 'pointer' }}
+                      />
+                    ))}
+                  </div>
+                </Image.PreviewGroup>
               </div>
             )}
 

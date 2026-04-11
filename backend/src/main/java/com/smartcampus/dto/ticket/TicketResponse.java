@@ -27,6 +27,7 @@ public class TicketResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Long resolutionTimeHours;
+    private boolean escalated;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -68,4 +69,6 @@ public class TicketResponse {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public Long getResolutionTimeHours() { return resolutionTimeHours; }
     public void setResolutionTimeHours(Long resolutionTimeHours) { this.resolutionTimeHours = resolutionTimeHours; }
+    public boolean isEscalated() { return escalated; }
+    public void setEscalated(boolean escalated) { this.escalated = escalated; }
 }
