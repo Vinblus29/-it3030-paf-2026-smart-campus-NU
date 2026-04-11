@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Card, Table, Button, Tag, Modal, message, Drawer, Descriptions,
-  Select, Space, Tabs, Form, Input, List, Avatar, Popconfirm, Typography, Image
+  Select, Space, Tabs, Form, Input, List, Avatar, Popconfirm, Typography, Image, Timeline
 } from 'antd';
 import { EyeOutlined, UserOutlined, EditOutlined, DeleteOutlined, SendOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
@@ -29,6 +29,7 @@ export default function TicketsPage() {
   const [commentText, setCommentText] = useState('');
   const [editingComment, setEditingComment] = useState(null);
   const [editText, setEditText] = useState('');
+  const [activity, setActivity] = useState([]);
 
   // Admin status modal state
   const [statusModal, setStatusModal] = useState(false);
@@ -55,15 +56,17 @@ export default function TicketsPage() {
     finally { setLoading(false); }
   };
 
-  const fetchComments = async (ticketId) => {
-    try { setComments(await ticketService.getComments(ticketId)); }
-    catch { message.error('Failed to load comments'); }
-  };
-
-  const handleView = async (ticket) => {
+const handleView = async (ticket) => {
     setSelected(ticket);
     setDrawerOpen(true);
-    await fetchComments(ticket.id);
+    try {
+      const [commentsData, activityData] = await Promise.all([
+        ticketService.getComments(ticket.id),
+        ticketService.getActivity(ticket.id),
+      ]);
+      setComments(commentsData);
+      setActivity(activityData);
+    } catch { message.error('Failed to load ticket details'); }
   };
 
   const closeDrawer = () => {
@@ -72,6 +75,7 @@ export default function TicketsPage() {
     setComments([]);
     setCommentText('');
     setEditingComment(null);
+    setActivity([]);
   };
 
   // Admin: full status update
@@ -380,6 +384,29 @@ export default function TicketsPage() {
                 </Descriptions.Item>
               )}
             </Descriptions>
+
+            {activity.length > 0 && (
+              <div>
+                <Text strong className="text-base">Activity Timeline</Text>
+                <Timeline
+                  className="mt-3"
+                  items={activity.map(a => ({
+                    color:
+                      a.action === 'CREATED' ? 'green' :
+                      a.action === 'STATUS_CHANGED' ? 'blue' :
+                      a.action === 'ASSIGNED' ? 'orange' :
+                      a.action === 'PRIORITY_CHANGED' ? 'red' :
+                      'gray',
+                    children: (
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#444' }}>{a.detail}</div>
+                        <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>{new Date(a.createdAt).toLocaleString()}</div>
+                      </div>
+                    )
+                  }))}
+                />
+              </div>
+            )}
 
             {selected.imageUrls?.length > 0 && (
               <div>

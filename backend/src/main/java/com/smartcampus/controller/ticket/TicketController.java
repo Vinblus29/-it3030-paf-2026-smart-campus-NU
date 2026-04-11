@@ -1,5 +1,6 @@
 package com.smartcampus.controller.ticket;
 
+import com.smartcampus.dto.ticket.TicketActivityDTO;
 import com.smartcampus.dto.ticket.TicketRequest;
 import com.smartcampus.dto.ticket.TicketResponse;
 import com.smartcampus.dto.ticket.UpdateStatusRequest;
@@ -96,6 +97,11 @@ public class TicketController {
     public TicketResponse assign(@PathVariable Long id,
                                  @RequestBody Map<String, Long> body) {
         return service.assignTicket(id, body.get("assigneeId"));
+    }
+
+    @GetMapping("/{id}/activity")
+    public List<TicketActivityDTO> getActivity(@PathVariable Long id) {
+        return service.getActivity(id);
     }
 
     @DeleteMapping("/{id}")

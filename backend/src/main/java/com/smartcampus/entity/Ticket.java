@@ -2,9 +2,12 @@ package com.smartcampus.entity;
 
 import com.smartcampus.enums.Priority;
 import com.smartcampus.enums.TicketStatus;
+import com.smartcampus.model.Comment;
 import com.smartcampus.model.User;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "tickets")
@@ -57,6 +60,9 @@ public class Ticket {
     private LocalDateTime updatedAt;
 
     private LocalDateTime lastEscalatedAt;
+
+    @OneToMany(mappedBy = "ticket", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Comment> comments = new ArrayList<>();
 
     @PrePersist
     public void onCreate() {

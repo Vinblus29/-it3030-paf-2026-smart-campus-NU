@@ -1,9 +1,11 @@
 package com.smartcampus.service.ticket;
 
+import com.smartcampus.dto.ticket.TicketActivityDTO;
 import com.smartcampus.dto.ticket.TicketRequest;
 import com.smartcampus.dto.ticket.TicketResponse;
 import com.smartcampus.dto.ticket.UpdateStatusRequest;
 import com.smartcampus.entity.Ticket;
+import com.smartcampus.entity.TicketActivity;
 import com.smartcampus.enums.Priority;
 import com.smartcampus.enums.Role;
 import com.smartcampus.enums.TicketCategory;
@@ -11,6 +13,7 @@ import com.smartcampus.enums.TicketStatus;
 import com.smartcampus.model.Notification;
 import com.smartcampus.model.User;
 import com.smartcampus.repository.NotificationRepository;
+import com.smartcampus.repository.TicketActivityRepository;
 import com.smartcampus.repository.TicketRepository;
 import com.smartcampus.repository.UserRepository;
 import com.smartcampus.service.S3Service;
@@ -35,16 +38,20 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
+    private final TicketActivityRepository activityRepository;
     private final AuthService authService;
     private final S3Service s3Service;
     private final PushNotificationService pushNotificationService;
 
     public TicketService(TicketRepository ticketRepository, UserRepository userRepository,
-                         NotificationRepository notificationRepository, AuthService authService,
+                         NotificationRepository notificationRepository,
+                         TicketActivityRepository activityRepository,
+                         AuthService authService,
                          S3Service s3Service, PushNotificationService pushNotificationService) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;
+        this.activityRepository = activityRepository;
         this.authService = authService;
         this.s3Service = s3Service;
         this.pushNotificationService = pushNotificationService;
@@ -57,18 +64,15 @@ public class TicketService {
             throw new RuntimeException("Account is pending approval. You cannot raise tickets yet.");
         }
 
-        // Validate category against enum
         try {
             TicketCategory.valueOf(request.getCategory().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Invalid category: " + request.getCategory());
         }
 
-        // Duplicate ticket guard
         if (ticketRepository.existsOpenTicketByReporterAndTitleAndLocation(
                 currentUser.getId(), request.getTitle(), request.getLocation())) {
-            throw new RuntimeException(
-                "You already have an open ticket for this issue at this location.");
+            throw new RuntimeException("You already have an open ticket for this issue at this location.");
         }
 
         Ticket ticket = new Ticket();
@@ -93,7 +97,18 @@ public class TicketService {
             }
         }
 
-        return toResponse(ticketRepository.save(ticket), currentUser);
+        Ticket saved = ticketRepository.save(ticket);
+
+        // Record activity: ticket created
+        activityRepository.save(new TicketActivity(
+                saved.getId(),
+                "CREATED",
+                "Ticket submitted by " + currentUser.getFirstName() + " " + currentUser.getLastName()
+                        + " with priority " + request.getPriority(),
+                currentUser
+        ));
+
+        return toResponse(saved, currentUser);
     }
 
     public List<TicketResponse> getAllTickets() {
@@ -145,6 +160,23 @@ public class TicketService {
 
     public List<User> getTechnicians() {
         return userRepository.findByRole(Role.TECHNICIAN);
+    }
+
+    // Activity timeline endpoint
+    public List<TicketActivityDTO> getActivity(Long ticketId) {
+        User currentUser = authService.getCurrentUser();
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+        boolean isAdminOrTechnician = currentUser.getRole() == Role.ADMIN
+                || currentUser.getRole() == Role.TECHNICIAN;
+        boolean isReporter = ticket.getReporter() != null
+                && ticket.getReporter().getId().equals(currentUser.getId());
+        if (!isAdminOrTechnician && !isReporter) {
+            throw new RuntimeException("Not authorized to view this ticket");
+        }
+        return activityRepository.findByTicketIdOrderByCreatedAtAsc(ticketId).stream()
+                .map(this::toActivityDTO)
+                .collect(Collectors.toList());
     }
 
     public Map<String, Object> getTicketStats() {
@@ -222,6 +254,11 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
 
+        // Block updates on terminal statuses
+        if (ticket.getStatus() == TicketStatus.CLOSED || ticket.getStatus() == TicketStatus.REJECTED) {
+            throw new RuntimeException("Cannot update a ticket that is already " + ticket.getStatus());
+        }
+
         if (currentUser.getRole() == Role.TECHNICIAN) {
             if (ticket.getAssignee() == null ||
                     !ticket.getAssignee().getId().equals(currentUser.getId())) {
@@ -229,6 +266,7 @@ public class TicketService {
             }
         }
 
+        TicketStatus oldStatus = ticket.getStatus();
         TicketStatus newStatus = request.getStatus();
         ticket.setStatus(newStatus);
 
@@ -244,6 +282,17 @@ public class TicketService {
 
         Ticket saved = ticketRepository.save(ticket);
 
+        // Record activity: status changed
+        String detail = "Status changed from " + oldStatus + " to " + newStatus
+                + " by " + currentUser.getFirstName() + " " + currentUser.getLastName();
+        if (request.getResolutionNotes() != null && !request.getResolutionNotes().isBlank()) {
+            detail += ". Notes: " + request.getResolutionNotes();
+        }
+        if (newStatus == TicketStatus.REJECTED && request.getRejectionReason() != null) {
+            detail += ". Reason: " + request.getRejectionReason();
+        }
+        activityRepository.save(new TicketActivity(id, "STATUS_CHANGED", detail, currentUser));
+
         // In-app notification to reporter
         if (ticket.getReporter() != null) {
             Notification n = new Notification(
@@ -257,7 +306,7 @@ public class TicketService {
             notificationRepository.save(n);
         }
 
-        // Push notification (FCM via SNS) — non-blocking
+        // Push notification — non-blocking
         try {
             if (ticket.getReporter() != null) {
                 String statusLabel = newStatus != null ? newStatus.name() : "Updated";
@@ -298,8 +347,22 @@ public class TicketService {
         }
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
-        ticket.setPriority(Priority.valueOf(priority.toUpperCase()));
-        return toResponse(ticketRepository.save(ticket), currentUser);
+
+        Priority oldPriority = ticket.getPriority();
+        Priority newPriority = Priority.valueOf(priority.toUpperCase());
+        ticket.setPriority(newPriority);
+        Ticket saved = ticketRepository.save(ticket);
+
+        // Record activity: priority changed
+        activityRepository.save(new TicketActivity(
+                id,
+                "PRIORITY_CHANGED",
+                "Priority changed from " + oldPriority + " to " + newPriority
+                        + " by " + currentUser.getFirstName() + " " + currentUser.getLastName(),
+                currentUser
+        ));
+
+        return toResponse(saved, currentUser);
     }
 
     @Transactional
@@ -322,6 +385,15 @@ public class TicketService {
         }
 
         Ticket saved = ticketRepository.save(ticket);
+
+        // Record activity: assigned
+        activityRepository.save(new TicketActivity(
+                id,
+                "ASSIGNED",
+                "Ticket assigned to " + assignee.getFirstName() + " " + assignee.getLastName()
+                        + " by " + currentUser.getFirstName() + " " + currentUser.getLastName(),
+                currentUser
+        ));
 
         Notification n = new Notification(
                 assignee,
@@ -349,7 +421,18 @@ public class TicketService {
         if (!isAdmin && !isReporter) {
             throw new RuntimeException("Not authorized to delete this ticket");
         }
+        activityRepository.deleteByTicketId(id);
         ticketRepository.deleteById(id);
+    }
+
+    private TicketActivityDTO toActivityDTO(TicketActivity a) {
+        TicketActivityDTO dto = new TicketActivityDTO();
+        dto.setId(a.getId());
+        dto.setAction(a.getAction());
+        dto.setDetail(a.getDetail());
+        dto.setActorName(a.getActorName());
+        dto.setCreatedAt(a.getCreatedAt());
+        return dto;
     }
 
     private TicketResponse toResponse(Ticket t, User currentUser) {
@@ -368,13 +451,11 @@ public class TicketService {
         res.setCreatedAt(t.getCreatedAt());
         res.setUpdatedAt(t.getUpdatedAt());
 
-        // Resolution time
         if (t.getResolvedAt() != null && t.getCreatedAt() != null) {
             res.setResolutionTimeHours(
                     Duration.between(t.getCreatedAt(), t.getResolvedAt()).toHours());
         }
 
-        // Escalation flag
         res.setEscalated(t.getLastEscalatedAt() != null);
 
         if (t.getImageUrls() != null && !t.getImageUrls().isBlank()) {
