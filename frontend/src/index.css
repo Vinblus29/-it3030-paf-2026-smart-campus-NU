@@ -168,3 +168,95 @@ body {
     background: #fff;
   }
 }
+
+/* ── Landing Page Specific Styles ── */
+.landing-page {
+  min-height: 100vh;
+  background: #0a0a1a;
+}
+
+.landing-page .ant-carousel .slick-arrow {
+  display: none !important;
+}
+
+.landing-page .ant-carousel:hover .slick-arrow {
+  display: block !important;
+}
+
+.landing-page .ant-card {
+  background: #1a1a2e !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.landing-page .ant-card-head {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.landing-page .ant-card-head-title {
+  color: #fff !important;
+}
+
+.landing-page .ant-picker-calendar {
+  background: transparent !important;
+}
+
+.landing-page .ant-picker-calendar-header {
+  background: transparent !important;
+}
+
+.landing-page .ant-picker-calendar-date {
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.landing-page .ant-picker-cell-selected .ant-picker-cell-inner {
+  background: #f5a623 !important;
+}
+
+.landing-page .ant-picker-content th {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.landing-page .ant-picker-cell-inner {
+  color: #fff !important;
+}
+
+.landing-page .ant-picker-cell-disabled .ant-picker-cell-inner {
+  color: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Smooth scrolling for anchor links */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

@@ -104,22 +104,17 @@ const Navbar = () => {
 
         {/* ── Logo ── */}
         <Link to="/dashboard" style={{
-          display: 'flex', alignItems: 'center', gap: 10,
+          display: 'flex', alignItems: 'center',
           textDecoration: 'none', marginRight: 32, flexShrink: 0,
         }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 6,
-            background: 'linear-gradient(135deg, #f5a623, #e8920e)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <svg width="18" height="18" fill="none" stroke="#fff" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', lineHeight: 1.1, letterSpacing: 0.3 }}>Smart Campus</div>
-            <div style={{ fontSize: 9, color: '#f5a623', letterSpacing: 1.2, textTransform: 'uppercase', fontWeight: 600 }}>University Portal</div>
-          </div>
+          <img 
+            src="/southwestern-campus-logo.png" 
+            alt="Southwestern Campus Logo" 
+            style={{
+              height: 50,
+              objectFit: 'contain'
+            }}
+          />
         </Link>
 
         {/* ── Nav Links ── */}

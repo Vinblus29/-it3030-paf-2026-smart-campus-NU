@@ -1,15 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Modal, Form, DatePicker, Input, InputNumber, Button, Alert } from 'antd';
+import { Modal, Form, DatePicker, Input, InputNumber, Button, Alert, Select } from 'antd';
 import { CheckCircleOutlined, CalendarOutlined, EditOutlined } from '@ant-design/icons';
 import bookingService from '../services/bookingService'; 
 import dayjs from 'dayjs'; 
 
 const { RangePicker } = DatePicker;
 
+const RECURRENCE_OPTIONS = [
+  { value: 'ONCE', label: 'One Time' },
+  { value: 'DAILY', label: 'Daily' },
+  { value: 'WEEKLY', label: 'Weekly' },
+  { value: 'MONTHLY', label: 'Monthly' },
+];
+
 const BookingModal = ({ visible, facility, onCancel, onSuccess, editingBooking = null }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [alertInfo, setAlertInfo] = useState(null);
+  const [recurrenceType, setRecurrenceType] = useState('ONCE');
   const isEdit = !!editingBooking;
 
   useEffect(() => {
@@ -17,12 +25,23 @@ const BookingModal = ({ visible, facility, onCancel, onSuccess, editingBooking =
       form.setFieldsValue({
         range: [dayjs(editingBooking.startTime), dayjs(editingBooking.endTime)],
         purpose: editingBooking.purpose,
-        numberOfPeople: editingBooking.numberOfPeople || 1
+        numberOfPeople: editingBooking.numberOfPeople || 1,
+        recurrenceType: editingBooking.recurrenceType || 'ONCE',
+        recurringUntil: editingBooking.recurringUntil ? dayjs(editingBooking.recurringUntil) : null
       });
+      setRecurrenceType(editingBooking.recurrenceType || 'ONCE');
     } else if (visible) {
       form.resetFields();
+      setRecurrenceType('ONCE');
     }
   }, [visible, editingBooking, form]);
+
+  const handleRecurrenceChange = (value) => {
+    setRecurrenceType(value);
+    if (value === 'ONCE') {
+      form.setFieldsValue({ recurringUntil: null });
+    }
+  };
 
   const handleSubmit = async (values) => {
     try {
@@ -36,7 +55,9 @@ const BookingModal = ({ visible, facility, onCancel, onSuccess, editingBooking =
         startTime: start.format('YYYY-MM-DDTHH:mm:ss'),
         endTime: end.format('YYYY-MM-DDTHH:mm:ss'),
         purpose: values.purpose,
-        numberOfPeople: values.numberOfPeople || 1
+        numberOfPeople: values.numberOfPeople || 1,
+        recurrenceType: values.recurrenceType || 'ONCE',
+        recurringUntil: values.recurringUntil ? values.recurringUntil.format('YYYY-MM-DDTHH:mm:ss') : null
       };
 
       if (isEdit) {
@@ -47,11 +68,18 @@ const BookingModal = ({ visible, facility, onCancel, onSuccess, editingBooking =
           description: 'Your booking has been successfully updated.',
         });
       } else {
+        const isRecurring = payload.recurrenceType !== 'ONCE';
+        const recurrenceLabel = isRecurring 
+          ? payload.recurrenceType.charAt(0) + payload.recurrenceType.slice(1).toLowerCase()
+          : '';
+        
         await bookingService.createBooking(payload);
         setAlertInfo({
           type: 'success',
-          message: 'Booking Submitted!',
-          description: 'Your booking request has been received and is pending approval.',
+          message: isRecurring ? 'Recurring Bookings Submitted!' : 'Booking Submitted!',
+          description: isRecurring 
+            ? `Your ${recurrenceLabel} recurring bookings have been submitted and are pending approval.`
+            : 'Your booking request has been received and is pending approval.',
         });
       }
 
@@ -61,7 +89,7 @@ const BookingModal = ({ visible, facility, onCancel, onSuccess, editingBooking =
       setTimeout(() => {
         setAlertInfo(null);
         onSuccess();
-      }, 1800);
+      }, 2000);
 
     } catch (error) {
       console.error('Error creating booking:', error);
@@ -101,6 +129,7 @@ const BookingModal = ({ visible, facility, onCancel, onSuccess, editingBooking =
       onCancel={handleCancel}
       footer={null}
       destroyOnClose
+      width={520}
     >
       {/* Inline Alert — shown instead of floating toast */}
       {alertInfo && (
@@ -120,7 +149,7 @@ const BookingModal = ({ visible, facility, onCancel, onSuccess, editingBooking =
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
-        initialValues={{ numberOfPeople: 1 }}
+        initialValues={{ numberOfPeople: 1, recurrenceType: 'ONCE' }}
       >
         <Form.Item
           name="range"
@@ -137,6 +166,34 @@ const BookingModal = ({ visible, facility, onCancel, onSuccess, editingBooking =
             disabledDate={(current) => current && current < dayjs().startOf('day')}
           />
         </Form.Item>
+
+        <Form.Item
+          name="recurrenceType"
+          label="Repeat"
+          tooltip="Choose how often this booking should repeat"
+        >
+          <Select 
+            options={RECURRENCE_OPTIONS}
+            onChange={handleRecurrenceChange}
+            placeholder="Select recurrence"
+          />
+        </Form.Item>
+
+        {recurrenceType !== 'ONCE' && (
+          <Form.Item
+            name="recurringUntil"
+            label="Repeat Until"
+            rules={[{ required: true, message: 'Please select end date for recurring bookings' }]}
+            tooltip="This booking will repeat until this date"
+          >
+            <DatePicker 
+              className="w-full"
+              format="YYYY-MM-DD"
+              disabledDate={(current) => current && current <= dayjs()}
+              placeholder="Select end date"
+            />
+          </Form.Item>
+        )}
 
         <Form.Item
           name="purpose"
