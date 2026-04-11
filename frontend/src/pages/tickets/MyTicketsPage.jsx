@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Card, Table, Button, Tag, Modal, message, Drawer, Descriptions,
   Form, Input, Select, Upload, Space, List, Avatar, Popconfirm,
@@ -42,7 +42,6 @@ export default function MyTicketsPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
-  const [searching, setSearching] = useState(false);
 
   // Fetch facilities for location dropdown
   useEffect(() => {
@@ -51,36 +50,33 @@ export default function MyTicketsPage() {
       .catch(() => {});
   }, []);
 
-  // Initial load and filter changes — debounce only text search
-  useEffect(() => {
-    if (!searchText) {
-      fetchTickets();
-      return;
-    }
-    const timer = setTimeout(() => { fetchTickets(); }, 400);
-    return () => clearTimeout(timer);
-  }, [searchText, filterStatus, filterCategory, filterPriority]);
+  // Load tickets once on mount
+  useEffect(() => { fetchTickets(); }, []);
 
   const fetchTickets = async () => {
     try {
-      setSearching(true);
-      const hasFilters = searchText || filterStatus || filterCategory || filterPriority;
-      const data = hasFilters
-        ? await ticketService.searchTickets({
-            q: searchText || undefined,
-            status: filterStatus || undefined,
-            category: filterCategory || undefined,
-            priority: filterPriority || undefined,
-          })
-        : await ticketService.getMyTickets();
+      setLoading(true);
+      const data = await ticketService.getMyTickets();
       setTickets(data);
-      // keep unfiltered copy for stats — only update when no filters active
-      if (!hasFilters) setAllTickets(data);
+      setAllTickets(data);
     } catch { message.error('Failed to load tickets'); }
-    finally { setLoading(false); setSearching(false); }
+    finally { setLoading(false); }
   };
 
-  const filteredTickets = tickets;
+  // Client-side filtering with useMemo — same pattern as bookings
+  const filteredTickets = useMemo(() => {
+    return tickets.filter(t => {
+      const matchSearch = !searchText ||
+        t.title?.toLowerCase().includes(searchText.toLowerCase()) ||
+        t.location?.toLowerCase().includes(searchText.toLowerCase()) ||
+        t.description?.toLowerCase().includes(searchText.toLowerCase());
+      const matchStatus = !filterStatus || t.status === filterStatus;
+      const matchCategory = !filterCategory || t.category === filterCategory;
+      const matchPriority = !filterPriority || t.priority === filterPriority;
+      return matchSearch && matchStatus && matchCategory && matchPriority;
+    });
+  }, [tickets, searchText, filterStatus, filterCategory, filterPriority]);
+
   const hasActiveFilters = searchText || filterStatus || filterCategory || filterPriority;
 
   const clearFilters = () => {
@@ -91,10 +87,10 @@ export default function MyTicketsPage() {
   };
 
   const stats = {
-    total: allTickets.length,
-    open: allTickets.filter(t => t.status === 'OPEN').length,
-    inProgress: allTickets.filter(t => t.status === 'IN_PROGRESS').length,
-    resolved: allTickets.filter(t => t.status === 'RESOLVED').length,
+    total: tickets.length,
+    open: tickets.filter(t => t.status === 'OPEN').length,
+    inProgress: tickets.filter(t => t.status === 'IN_PROGRESS').length,
+    resolved: tickets.filter(t => t.status === 'RESOLVED').length,
   };
 
   const handleView = async (ticket) => {
@@ -266,7 +262,7 @@ export default function MyTicketsPage() {
           {hasActiveFilters && <Button icon={<ClearOutlined />} onClick={clearFilters}>Clear</Button>}
           {hasActiveFilters && (
             <Text type="secondary" className="self-center text-sm">
-              {tickets.length} of {allTickets.length} tickets
+              {filteredTickets.length} of {tickets.length} tickets
             </Text>
           )}
         </div>
@@ -276,7 +272,7 @@ export default function MyTicketsPage() {
             columns={columns}
             dataSource={filteredTickets}
             rowKey="id"
-            loading={loading || searching}
+            loading={loading}
             pagination={{ pageSize: 10, showTotal: total => `${total} tickets` }}
             locale={{
               emptyText: hasActiveFilters
