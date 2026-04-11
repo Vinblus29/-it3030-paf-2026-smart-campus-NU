@@ -41,7 +41,7 @@ export default function TicketsPage() {
   useEffect(() => {
     fetchTickets();
     if (isAdmin) ticketService.getTechnicians().then(setTechnicians).catch(() => {});
-  }, []);
+  }, [isAdmin]);
 
   const fetchTickets = async () => {
     try {
