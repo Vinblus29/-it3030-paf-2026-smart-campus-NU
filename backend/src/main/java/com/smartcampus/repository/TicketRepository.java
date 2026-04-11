@@ -20,6 +20,11 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     List<Ticket> findAllByOrderByCreatedAtDesc();
 
+    // Escalation — fetch only OPEN and IN_PROGRESS tickets (terminal statuses excluded)
+    @Query("SELECT t FROM Ticket t WHERE (t.status = com.smartcampus.enums.TicketStatus.OPEN " +
+           "OR t.status = com.smartcampus.enums.TicketStatus.IN_PROGRESS)")
+    List<Ticket> findActiveTicketsForEscalation();
+
     // #2 — duplicate guard
     @Query("SELECT COUNT(t) > 0 FROM Ticket t WHERE t.reporter.id = :reporterId " +
            "AND t.title = :title AND t.location = :location AND t.status = com.smartcampus.enums.TicketStatus.OPEN")

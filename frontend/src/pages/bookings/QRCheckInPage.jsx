@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, Button, message, Space, Result, Spin, Typography, Divider } from 'antd';
 import { ScanOutlined, ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -13,43 +13,8 @@ const QRCheckInPage = () => {
   const [loading, setLoading] = useState(false);
   const [bookingData, setBookingData] = useState(null);
   const [status, setStatus] = useState('idle'); // idle, scanning, success, error
-
-  useEffect(() => {
-    let scanner = null;
-
-    if (status === 'scanning') {
-      scanner = new Html5QrcodeScanner('reader', {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-      });
-
-      scanner.render(onScanSuccess, onScanFailure);
-    }
-
-    return () => {
-      if (scanner) {
-        scanner.clear().catch(err => console.error('Failed to clear scanner', err));
-      }
-    };
-  }, [status, onScanSuccess]);
-
-  const onScanSuccess = async (decodedText) => {
-    if (status !== 'scanning') return;
-    
-    // Bug #7 Fix: QR now carries a UUID token (e.g. "CHECKIN:<uuid>")
-    // Call checkInByToken which validates the secure UUID instead of plain booking ID
-    if (decodedText.startsWith('CHECKIN:')) {
-      const token = decodedText.split(':')[1];
-      setStatus('processing');
-      await handleCheckIn(token);
-    } else {
-      message.error('Invalid QR code format');
-    }
-  };
-
-  const onScanFailure = (error) => {
-    // console.warn(`Code scan error = ${error}`);
-  };
+  const statusRef = useRef(status);
+  statusRef.current = status;
 
   const handleCheckIn = async (token) => {
     try {
@@ -73,6 +38,41 @@ const QRCheckInPage = () => {
     setBookingData(null);
     setStatus('scanning');
   };
+
+  const onScanSuccess = async (decodedText) => {
+    if (statusRef.current !== 'scanning') return;
+    
+    if (decodedText.startsWith('CHECKIN:')) {
+      const token = decodedText.split(':')[1];
+      setStatus('processing');
+      await handleCheckIn(token);
+    } else {
+      message.error('Invalid QR code format');
+    }
+  };
+
+  const onScanFailure = (error) => {
+    // console.warn(`Code scan error = ${error}`);
+  };
+
+  useEffect(() => {
+    let scanner = null;
+
+    if (status === 'scanning') {
+      scanner = new Html5QrcodeScanner('reader', {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+      });
+
+      scanner.render(onScanSuccess, onScanFailure);
+    }
+
+    return () => {
+      if (scanner) {
+        scanner.clear().catch(err => console.error('Failed to clear scanner', err));
+      }
+    };
+  }, [status]);
 
   const startScanning = () => {
     setStatus('scanning');
