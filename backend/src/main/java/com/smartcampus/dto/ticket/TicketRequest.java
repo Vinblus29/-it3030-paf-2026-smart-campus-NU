@@ -24,6 +24,8 @@ public class TicketRequest {
 
     @NotNull(message = "Priority is required")
     private Priority priority;
+    
+    private Long facilityId;
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
@@ -37,4 +39,6 @@ public class TicketRequest {
     public void setContactDetails(String contactDetails) { this.contactDetails = contactDetails; }
     public Priority getPriority() { return priority; }
     public void setPriority(Priority priority) { this.priority = priority; }
+    public Long getFacilityId() { return facilityId; }
+    public void setFacilityId(Long facilityId) { this.facilityId = facilityId; }
 }

@@ -57,6 +57,8 @@ public class Ticket {
     private LocalDateTime updatedAt;
 
     private LocalDateTime lastEscalatedAt;
+    
+    private Long facilityId;
 
     @PrePersist
     public void onCreate() {
@@ -109,6 +111,8 @@ public class Ticket {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public LocalDateTime getLastEscalatedAt() { return lastEscalatedAt; }
     public void setLastEscalatedAt(LocalDateTime lastEscalatedAt) { this.lastEscalatedAt = lastEscalatedAt; }
+    public Long getFacilityId() { return facilityId; }
+    public void setFacilityId(Long facilityId) { this.facilityId = facilityId; }
 
 }
 

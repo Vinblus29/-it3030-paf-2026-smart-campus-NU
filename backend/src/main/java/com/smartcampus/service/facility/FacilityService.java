@@ -18,25 +18,25 @@ public class FacilityService {
     private final FacilityRepository facilityRepository;
     private final com.smartcampus.repository.BookingRepository bookingRepository;
     private final com.smartcampus.repository.BlackoutPeriodRepository blackoutPeriodRepository;
-    private final com.smartcampus.repository.MaintenanceTicketRepository maintenanceTicketRepository;
     private final com.smartcampus.service.S3Service s3Service;
     private final com.smartcampus.service.notification.NotificationService notificationService;
     private final com.smartcampus.service.notification.PushNotificationService pushNotificationService;
+    private final com.smartcampus.repository.TicketRepository ticketRepository;
 
     public FacilityService(FacilityRepository facilityRepository,
                            com.smartcampus.repository.BookingRepository bookingRepository,
                            com.smartcampus.repository.BlackoutPeriodRepository blackoutPeriodRepository,
-                           com.smartcampus.repository.MaintenanceTicketRepository maintenanceTicketRepository,
                            com.smartcampus.service.S3Service s3Service,
                            com.smartcampus.service.notification.NotificationService notificationService,
-                           com.smartcampus.service.notification.PushNotificationService pushNotificationService) {
+                           com.smartcampus.service.notification.PushNotificationService pushNotificationService,
+                           com.smartcampus.repository.TicketRepository ticketRepository) {
         this.facilityRepository = facilityRepository;
         this.bookingRepository = bookingRepository;
         this.blackoutPeriodRepository = blackoutPeriodRepository;
-        this.maintenanceTicketRepository = maintenanceTicketRepository;
         this.s3Service = s3Service;
         this.notificationService = notificationService;
         this.pushNotificationService = pushNotificationService;
+        this.ticketRepository = ticketRepository;
     }
 
     public List<FacilityDTO> getAllFacilities() {
@@ -170,15 +170,53 @@ public class FacilityService {
     }
 
     public String calculateHealthScore(Long facilityId) {
-        long openTickets = maintenanceTicketRepository.countByFacilityIdAndStatusNot(facilityId, "CLOSED");
-        List<com.smartcampus.model.MaintenanceTicket> tickets = maintenanceTicketRepository.findByFacilityId(facilityId);
+        if (facilityId == null) {
+            return "EXCELLENT";
+        }
         
-        boolean hasCritical = tickets.stream().anyMatch(t -> "CRITICAL".equals(t.getPriority()) && !"CLOSED".equals(t.getStatus()));
-        boolean hasHigh = tickets.stream().anyMatch(t -> "HIGH".equals(t.getPriority()) && !"CLOSED".equals(t.getStatus()));
-
-        if (hasCritical || openTickets >= 5) return "CRITICAL";
-        if (hasHigh || openTickets >= 3) return "NEEDS_ATTENTION";
-        if (openTickets > 0) return "GOOD";
+        com.smartcampus.model.Facility facility = facilityRepository.findById(facilityId).orElse(null);
+        if (facility == null) {
+            return "EXCELLENT";
+        }
+        
+        String facilityName = facility.getName();
+        String facilityLocation = facility.getLocation();
+        
+        List<com.smartcampus.enums.TicketStatus> resolvedStatuses = java.util.Arrays.asList(
+            com.smartcampus.enums.TicketStatus.RESOLVED, 
+            com.smartcampus.enums.TicketStatus.CLOSED, 
+            com.smartcampus.enums.TicketStatus.REJECTED
+        );
+        
+        long openTickets = 0;
+        if (facilityName != null && !facilityName.isEmpty()) {
+            openTickets = ticketRepository.countByFacilityIdOrLocationAndStatusNotIn(facilityId, facilityName, resolvedStatuses);
+        }
+        
+        List<com.smartcampus.entity.Ticket> tickets = ticketRepository.findByFacilityIdOrLocation(facilityId, facilityLocation != null ? facilityLocation : "");
+        
+        List<com.smartcampus.enums.TicketStatus> activeStatuses = java.util.Arrays.asList(
+            com.smartcampus.enums.TicketStatus.OPEN, 
+            com.smartcampus.enums.TicketStatus.IN_PROGRESS
+        );
+        
+        boolean hasCritical = tickets.stream()
+            .filter(t -> t.getPriority() == com.smartcampus.enums.Priority.CRITICAL)
+            .anyMatch(t -> activeStatuses.contains(t.getStatus()));
+        
+        boolean hasHighPriority = tickets.stream()
+            .filter(t -> t.getPriority() == com.smartcampus.enums.Priority.HIGH)
+            .anyMatch(t -> activeStatuses.contains(t.getStatus()));
+        
+        if (hasCritical || openTickets >= 5) {
+            return "CRITICAL";
+        }
+        if (openTickets >= 3 || hasHighPriority) {
+            return "NEEDS_ATTENTION";
+        }
+        if (openTickets > 0) {
+            return "GOOD";
+        }
         return "EXCELLENT";
     }
 
@@ -261,8 +299,13 @@ public class FacilityService {
         dto.setEquipment(facility.getEquipment());
         dto.setAvailabilityWindows(facility.getAvailabilityWindows());
         dto.setTags(facility.getTags());
-        dto.setHealthScore(calculateHealthScore(facility.getId()));
-        dto.setUtilizationPercentage(calculateUtilization(facility.getId()));
+        if (facility.getId() != null) {
+            dto.setHealthScore(calculateHealthScore(facility.getId()));
+            dto.setUtilizationPercentage(calculateUtilization(facility.getId()));
+        } else {
+            dto.setHealthScore("EXCELLENT");
+            dto.setUtilizationPercentage(0.0);
+        }
         dto.setCreatedAt(facility.getCreatedAt());
         return dto;
     }
