@@ -148,6 +148,23 @@ public class FacilityService {
 
     @Transactional
     public void deleteFacility(Long id) {
+        Facility facility = facilityRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Facility not found"));
+        
+        // Check for active bookings
+        List<com.smartcampus.model.Booking> activeBookings = bookingRepository.findByFacilityIdAndStartTimeAfter(
+            id, java.time.LocalDateTime.now());
+        boolean hasActiveBookings = activeBookings.stream()
+            .anyMatch(b -> "APPROVED".equals(b.getStatus()));
+        
+        if (hasActiveBookings) {
+            throw new RuntimeException("Cannot delete facility with active bookings. Please cancel or complete all bookings first.");
+        }
+        
+        // Delete related blackout periods first
+        List<BlackoutPeriod> blackoutPeriods = blackoutPeriodRepository.findByFacilityId(id);
+        blackoutPeriodRepository.deleteAll(blackoutPeriods);
+        
         facilityRepository.deleteById(id);
     }
 
