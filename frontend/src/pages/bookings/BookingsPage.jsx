@@ -1,17 +1,21 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Table, Button, Tag, Space, Modal, message, Card, Select, 
-  Input, Row, Col, Statistic, Typography, Empty, Tabs, DatePicker 
+  Input, Row, Col, Statistic, Typography, Empty, Tabs, DatePicker, Spin 
 } from 'antd';
 import { 
   CheckOutlined, CloseOutlined, EyeOutlined, CalendarOutlined,
-  SearchOutlined, ClearOutlined 
+  SearchOutlined, ClearOutlined, BarChartOutlined, EditOutlined 
 } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext'; 
-import bookingService from '../../services/bookingService'; 
+import bookingService from '../../services/bookingService';
+import BookingModal from '../../components/BookingModal';
+import { Pie, Column } from '@ant-design/charts';
+import dayjs from 'dayjs';
 
 const { Option } = Select;
 const { TextArea } = Input;
+const { RangePicker } = DatePicker;
 const { Text } = Typography;
 
 const BookingsPage = () => {
@@ -33,6 +37,15 @@ const BookingsPage = () => {
   const [logFacilityFilter, setLogFacilityFilter] = useState('ALL');
   const [logDateFilter, setLogDateFilter] = useState(null);
 
+  // Analytics state
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsDateRange, setAnalyticsDateRange] = useState([]);
+
+  // Edit booking state
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingBooking, setEditingBooking] = useState(null);
+
   useEffect(() => {
     fetchBookings();
   }, []);
@@ -47,6 +60,24 @@ const BookingsPage = () => {
       message.error('Failed to fetch bookings');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      setAnalyticsLoading(true);
+      let from, to;
+      if (analyticsDateRange.length === 2) {
+        from = analyticsDateRange[0].format('YYYY-MM-DDTHH:mm:ss');
+        to = analyticsDateRange[1].format('YYYY-MM-DDTHH:mm:ss');
+      }
+      const data = await bookingService.getAnalytics(from, to);
+      setAnalytics(data);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+      message.error('Failed to fetch analytics');
+    } finally {
+      setAnalyticsLoading(false);
     }
   };
 
@@ -227,6 +258,18 @@ const BookingsPage = () => {
           >
             View
           </Button>
+          {(record.status === 'PENDING' || record.status === 'APPROVED') && (
+            <Button 
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => {
+                setEditingBooking(record);
+                setEditModalVisible(true);
+              }}
+            >
+              Edit
+            </Button>
+          )}
           {record.status === 'PENDING' && isAdmin && (
             <>
               <Button 
@@ -443,6 +486,139 @@ const BookingsPage = () => {
                 }}
               />
           </Tabs.TabPane>
+
+          <Tabs.TabPane tab={<span><BarChartOutlined /> Analytics</span>} key="3">
+            <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-100 mt-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="font-medium text-purple-800">Date Range:</span>
+                <RangePicker 
+                  value={analyticsDateRange}
+                  onChange={(dates) => setAnalyticsDateRange(dates || [])}
+                  allowClear
+                />
+                <Button type="primary" icon={<BarChartOutlined />} onClick={fetchAnalytics}>
+                  Load Analytics
+                </Button>
+              </div>
+            </div>
+
+            {analyticsLoading ? (
+              <div className="flex justify-center py-20">
+                <Spin size="large" tip="Loading analytics..." />
+              </div>
+            ) : analytics ? (
+              <div className="space-y-6">
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} sm={12} md={6}>
+                    <Card size="small">
+                      <Statistic 
+                        title="Total Bookings" 
+                        value={analytics.totalBookings || 0} 
+                        valueStyle={{ color: '#1677ff', fontSize: 24 }}
+                      />
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={12} md={6}>
+                    <Card size="small">
+                      <Statistic 
+                        title="Approval Rate" 
+                        value={analytics.approvalRate?.toFixed(1) || 0} 
+                        suffix="%"
+                        valueStyle={{ color: '#52c41a', fontSize: 24 }}
+                      />
+                    </Card>
+                  </Col>
+                </Row>
+
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} md={12}>
+                    <Card title="Status Breakdown" size="small">
+                      {analytics.statusBreakdown && Object.keys(analytics.statusBreakdown).length > 0 ? (
+                        <Pie
+                          data={Object.entries(analytics.statusBreakdown).map(([key, value]) => ({
+                            type: key,
+                            value: Number(value)
+                          }))}
+                          angleField="value"
+                          colorField="type"
+                          radius={0.8}
+                          label={{ type: 'outer', content: '{name}: {value}' }}
+                          legend={{ position: 'bottom' }}
+                          height={250}
+                        />
+                      ) : (
+                        <Empty description="No status data" />
+                      )}
+                    </Card>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Card title="Most Booked Facilities" size="small">
+                      {analytics.mostBookedResources && Object.keys(analytics.mostBookedResources).length > 0 ? (
+                        <Column
+                          data={Object.entries(analytics.mostBookedResources).map(([key, value]) => ({
+                            facility: key,
+                            bookings: Number(value)
+                          }))}
+                          xField="facility"
+                          yField="bookings"
+                          color="#1890ff"
+                          height={250}
+                          label={{ position: 'top' }}
+                        />
+                      ) : (
+                        <Empty description="No facility data" />
+                      )}
+                    </Card>
+                  </Col>
+                </Row>
+
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} md={12}>
+                    <Card title="Peak Hours" size="small">
+                      {analytics.peakHoursHeatmap && Object.keys(analytics.peakHoursHeatmap).length > 0 ? (
+                        <Column
+                          data={Object.entries(analytics.peakHoursHeatmap).map(([key, value]) => ({
+                            hour: `${key}:00`,
+                            count: Number(value)
+                          }))}
+                          xField="hour"
+                          yField="count"
+                          color="#722ed1"
+                          height={250}
+                        />
+                      ) : (
+                        <Empty description="No peak hour data" />
+                      )}
+                    </Card>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Card title="Avg Duration by Facility Type (minutes)" size="small">
+                      {analytics.avgDurationMinutesByType && Object.keys(analytics.avgDurationMinutesByType).length > 0 ? (
+                        <Column
+                          data={Object.entries(analytics.avgDurationMinutesByType).map(([key, value]) => ({
+                            type: key,
+                            minutes: Math.round(Number(value))
+                          }))}
+                          xField="type"
+                          yField="minutes"
+                          color="#fa8c16"
+                          height={250}
+                          label={{ position: 'top', formatter: (v) => `${v.minutes}m` }}
+                        />
+                      ) : (
+                        <Empty description="No duration data" />
+                      )}
+                    </Card>
+                  </Col>
+                </Row>
+              </div>
+            ) : (
+              <div className="py-20 text-center">
+                <BarChartOutlined className="text-6xl text-gray-300 mb-4" />
+                <p className="text-gray-500">Click "Load Analytics" to view booking insights</p>
+              </div>
+            )}
+          </Tabs.TabPane>
         </Tabs>
       </Card>
 
@@ -543,6 +719,22 @@ const BookingsPage = () => {
           placeholder="Enter rejection reason here..."
         />
       </Modal>
+
+      {/* Edit Booking Modal */}
+      <BookingModal
+        visible={editModalVisible}
+        facility={editingBooking ? { id: editingBooking.facilityId, name: editingBooking.facilityName } : null}
+        onCancel={() => {
+          setEditModalVisible(false);
+          setEditingBooking(null);
+        }}
+        onSuccess={() => {
+          setEditModalVisible(false);
+          setEditingBooking(null);
+          fetchBookings();
+        }}
+        editingBooking={editingBooking}
+      />
     </div>
   );
 };
