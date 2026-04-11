@@ -62,6 +62,7 @@ const FacilityModal = ({ visible, facility, onCancel, onSuccess }) => {
       open={visible}
       onCancel={onCancel}
       onOk={() => form.submit()}
+      okButtonProps={{ disabled: submitting }}
       okText={facility ? 'Update' : 'Create'}
       destroyOnClose
     >

@@ -49,6 +49,13 @@ const Navbar = () => {
   const roleColor = ROLE_COLOR[role];
   const initials = `${user?.firstName?.charAt(0) ?? ''}${user?.lastName?.charAt(0) ?? ''}`.toUpperCase();
 
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await axios.get('/api/notifications/unread-count');
+      setUnreadCount(res.data);
+    } catch { /* empty */ }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchUnreadCount();
@@ -73,13 +80,6 @@ const Navbar = () => {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
-
-  const fetchUnreadCount = async () => {
-    try {
-      const res = await axios.get('/api/notifications/unread-count');
-      setUnreadCount(res.data);
-    } catch { }
-  };
 
   const handleLogout = () => {
     setDropdownOpen(false);

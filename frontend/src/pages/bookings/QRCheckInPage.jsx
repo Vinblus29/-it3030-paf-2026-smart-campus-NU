@@ -31,7 +31,7 @@ const QRCheckInPage = () => {
         scanner.clear().catch(err => console.error('Failed to clear scanner', err));
       }
     };
-  }, [status]);
+  }, [status, onScanSuccess]);
 
   const onScanSuccess = async (decodedText) => {
     if (status !== 'scanning') return;

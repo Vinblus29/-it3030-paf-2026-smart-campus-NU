@@ -120,7 +120,7 @@ export function usePushNotifications(isAuthenticated) {
                 unsubRef.current = null;
             }
         };
-    }, [isAuthenticated]);
+    }, [isAuthenticated, notification]);
 
     return {
         permissionState,
