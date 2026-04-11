@@ -169,6 +169,26 @@ public class AuthService {
     }
 
     @Transactional
+    public void verifyOtpOnly(OtpOnlyVerifyRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+            .orElseThrow(() -> new RuntimeException("User not found with this email"));
+
+        if (user.getOtpCode() == null || user.getOtpExpiry() == null) {
+            throw new RuntimeException("No OTP found for this user. Please request a new OTP.");
+        }
+
+        if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("OTP has expired. Please request a new OTP.");
+        }
+
+        if (!user.getOtpCode().equals(request.getOtp())) {
+            throw new RuntimeException("Invalid OTP. Please try again.");
+        }
+
+        // OTP is valid, don't clear it yet - it will be cleared when password is reset
+    }
+
+    @Transactional
     public void verifyOtp(OtpVerifyRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
             .orElseThrow(() -> new RuntimeException("User not found with this email"));

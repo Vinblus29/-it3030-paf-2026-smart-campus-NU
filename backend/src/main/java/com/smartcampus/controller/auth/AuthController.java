@@ -51,6 +51,12 @@ public class AuthController {
         return ResponseEntity.ok("Password reset successfully");
     }
 
+    @PostMapping("/verify-otp-only")
+    public ResponseEntity<String> verifyOtpOnly(@Valid @RequestBody OtpOnlyVerifyRequest request) {
+        authService.verifyOtpOnly(request);
+        return ResponseEntity.ok("OTP verified successfully");
+    }
+
     @PostMapping("/phone/generate-otp")
     public ResponseEntity<?> generatePhoneOtp(@RequestBody java.util.Map<String, String> req) {
         authService.generatePhoneOtp(req.get("phoneNumber"));
