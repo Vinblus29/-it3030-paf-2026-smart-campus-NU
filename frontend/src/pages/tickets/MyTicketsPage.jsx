@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Card, Table, Button, Tag, Modal, message, Drawer, Descriptions,
   Form, Input, Select, Upload, Space, List, Avatar, Popconfirm,
-  Empty, Typography, Row, Col, Statistic
+  Empty, Typography, Row, Col, Statistic, Image
 } from 'antd';
 import {
   PlusOutlined, EyeOutlined, UploadOutlined, UserOutlined,
@@ -32,6 +32,8 @@ export default function MyTicketsPage() {
   const [editText, setEditText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [fileList, setFileList] = useState([]);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState('');
   const [form] = Form.useForm();
 
   const [searchText, setSearchText] = useState('');
@@ -102,6 +104,19 @@ export default function MyTicketsPage() {
     setEditingComment(null);
   };
 
+  const handlePreview = async (file) => {
+    // Use existing preview URL or generate one from the file object
+    if (!file.url && !file.preview) {
+      file.preview = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file.originFileObj);
+        reader.onload = () => resolve(reader.result);
+      });
+    }
+    setPreviewImage(file.url || file.preview);
+    setPreviewOpen(true);
+  };
+
   const handleCreate = async (values) => {
     setSubmitting(true);
     try {
@@ -111,6 +126,7 @@ export default function MyTicketsPage() {
       setCreateOpen(false);
       form.resetFields();
       setFileList([]);
+      setPreviewImage('');
       fetchTickets();
     } catch (e) {
       message.error(e?.response?.data?.message || 'Failed to create ticket');
@@ -147,7 +163,12 @@ export default function MyTicketsPage() {
       title: 'Title', dataIndex: 'title', key: 'title',
       render: (text, r) => (
         <div>
-          <div className="font-medium">{text}</div>
+          <div className="font-medium">
+            {text}
+            {r.escalated && (
+              <Tag color="volcano" style={{ marginLeft: 6, fontSize: 10 }}>ESCALATED</Tag>
+            )}
+          </div>
           <Text type="secondary" className="text-xs">{r.category} · {r.location}</Text>
         </div>
       )
@@ -267,7 +288,7 @@ export default function MyTicketsPage() {
       <Modal
         title="Report an Incident"
         open={createOpen}
-        onCancel={() => { setCreateOpen(false); form.resetFields(); setFileList([]); }}
+        onCancel={() => { setCreateOpen(false); form.resetFields(); setFileList([]); setPreviewImage(''); }}
         footer={null}
         width={600}
       >
@@ -300,15 +321,34 @@ export default function MyTicketsPage() {
             <Input placeholder="Phone or email for follow-up" />
           </Form.Item>
           <Form.Item label="Evidence Images (max 3)">
+            <Image
+              style={{ display: 'none' }}
+              preview={{
+                visible: previewOpen,
+                src: previewImage,
+                onVisibleChange: (visible) => setPreviewOpen(visible),
+              }}
+            />
             <Upload
               listType="picture-card"
               fileList={fileList}
               beforeUpload={() => false}
+              onPreview={handlePreview}
               onChange={({ fileList: fl }) => setFileList(fl.slice(0, 3))}
               accept="image/*"
             >
-              {fileList.length < 3 && <div><UploadOutlined /><div className="mt-1">Upload</div></div>}
+              {fileList.length < 3 && (
+                <div>
+                  <UploadOutlined />
+                  <div className="mt-1" style={{ fontSize: 12 }}>Upload</div>
+                </div>
+              )}
             </Upload>
+            {fileList.length > 0 && (
+              <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+                {fileList.length}/3 image{fileList.length > 1 ? 's' : ''} selected — click a thumbnail to preview
+              </div>
+            )}
           </Form.Item>
           <Form.Item>
             <Space>
@@ -365,15 +405,27 @@ export default function MyTicketsPage() {
               <Descriptions.Item label="Submitted">
                 {selected.createdAt ? new Date(selected.createdAt).toLocaleString() : '—'}
               </Descriptions.Item>
+              {selected.escalated && (
+                <Descriptions.Item label="Auto-Escalated">
+                  <Tag color="volcano">Priority was automatically escalated due to inactivity</Tag>
+                </Descriptions.Item>
+              )}
               {selected.imageUrls?.length > 0 && (
                 <Descriptions.Item label="Evidence">
-                  <div className="flex gap-2 flex-wrap mt-1">
-                    {selected.imageUrls.map((url, i) => (
-                      <a key={i} href={url} target="_blank" rel="noreferrer">
-                        <img src={url} alt={`evidence-${i}`} className="w-20 h-20 object-cover rounded border" />
-                      </a>
-                    ))}
-                  </div>
+                  <Image.PreviewGroup>
+                    <div className="flex gap-2 flex-wrap mt-1">
+                      {selected.imageUrls.map((url, i) => (
+                        <Image
+                          key={i}
+                          src={url}
+                          alt={`evidence-${i}`}
+                          width={80}
+                          height={80}
+                          style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #d9d9d9', cursor: 'pointer' }}
+                        />
+                      ))}
+                    </div>
+                  </Image.PreviewGroup>
                 </Descriptions.Item>
               )}
             </Descriptions>
