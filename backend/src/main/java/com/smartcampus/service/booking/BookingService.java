@@ -533,6 +533,7 @@ public class BookingService {
         dto.setCheckInTime(booking.getCheckInTime());
         dto.setQrToken(booking.getQrToken());
         dto.setRecurrenceType(booking.getRecurrenceType());
+        dto.setRecurringGroupId(booking.getRecurringGroupId());
         dto.setWaitlisted(booking.isWaitlisted());
         return dto;
     }
