@@ -147,6 +147,17 @@ const MyBookingsPage = () => {
       ),
     }, 
     { 
+      title: 'Repeat', 
+      key: 'recurrence', 
+      render: (_, record) => { 
+        const recType = record.recurrenceType;
+        if (!recType || recType === 'ONCE') return <Tag>One Time</Tag>;
+        const colors = { DAILY: 'blue', WEEKLY: 'purple', MONTHLY: 'cyan' };
+        const labels = { DAILY: 'Daily', WEEKLY: 'Weekly', MONTHLY: 'Monthly' };
+        return <Tag color={colors[recType]}>{labels[recType]}</Tag>;
+      },
+    }, 
+    { 
       title: 'Status', 
       dataIndex: 'status', 
       key: 'status', 

@@ -41,5 +41,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     // For reminder cron job
     List<Booking> findByStatusAndStartTimeBetween(String status, LocalDateTime start, LocalDateTime end);
+    
+    // For recurring bookings
+    List<Booking> findByRecurringGroupId(String recurringGroupId);
 }
 

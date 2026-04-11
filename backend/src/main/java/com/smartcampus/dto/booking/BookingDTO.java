@@ -25,6 +25,7 @@ public class BookingDTO {
     private LocalDateTime checkInTime;
     private String qrToken;
     private String recurrenceType;
+    private String recurringGroupId;
     private boolean waitlisted;
 
     // Constructors
@@ -198,6 +199,14 @@ public class BookingDTO {
 
     public void setRecurrenceType(String recurrenceType) {
         this.recurrenceType = recurrenceType;
+    }
+
+    public String getRecurringGroupId() {
+        return recurringGroupId;
+    }
+
+    public void setRecurringGroupId(String recurringGroupId) {
+        this.recurringGroupId = recurringGroupId;
     }
 
     public boolean isWaitlisted() {
