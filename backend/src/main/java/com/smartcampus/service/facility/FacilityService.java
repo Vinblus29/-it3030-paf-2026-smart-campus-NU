@@ -5,6 +5,7 @@ import com.smartcampus.dto.facility.BlackoutPeriodDTO;
 import com.smartcampus.model.Facility;
 import com.smartcampus.model.BlackoutPeriod;
 import com.smartcampus.repository.FacilityRepository;
+import com.smartcampus.exception.FacilityDeletionException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -151,17 +152,34 @@ public class FacilityService {
         Facility facility = facilityRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Facility not found"));
         
-        // Check for active bookings
+        // Check for active bookings (PENDING or APPROVED that haven't started yet)
         List<com.smartcampus.model.Booking> activeBookings = bookingRepository.findByFacilityIdAndStartTimeAfter(
             id, java.time.LocalDateTime.now());
-        boolean hasActiveBookings = activeBookings.stream()
-            .anyMatch(b -> "APPROVED".equals(b.getStatus()));
         
-        if (hasActiveBookings) {
-            throw new RuntimeException("Cannot delete facility with active bookings. Please cancel or complete all bookings first.");
+        boolean hasConflictingBookings = activeBookings.stream()
+            .anyMatch(b -> "APPROVED".equals(b.getStatus()) || "PENDING".equals(b.getStatus()));
+        
+        if (hasConflictingBookings) {
+            throw new FacilityDeletionException(
+                "Cannot delete facility because it has active bookings. Please cancel or complete all bookings before deletion."
+            );
         }
         
-        // Delete related blackout periods first
+        // Check for any other bookings (including past ones) that might have tickets or other dependencies
+        List<com.smartcampus.model.Booking> allBookings = bookingRepository.findByFacilityId(id);
+        if (!allBookings.isEmpty()) {
+            long pendingOrApprovedCount = allBookings.stream()
+                .filter(b -> "PENDING".equals(b.getStatus()) || "APPROVED".equals(b.getStatus()))
+                .count();
+            
+            if (pendingOrApprovedCount > 0) {
+                throw new FacilityDeletionException(
+                    "Cannot delete facility with pending or approved bookings. Please update their status first."
+                );
+            }
+        }
+        
+        // Delete related blackout periods first (they have FK to facility)
         List<BlackoutPeriod> blackoutPeriods = blackoutPeriodRepository.findByFacilityId(id);
         blackoutPeriodRepository.deleteAll(blackoutPeriods);
         
