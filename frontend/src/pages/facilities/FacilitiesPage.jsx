@@ -167,7 +167,8 @@ const FacilitiesPage = () => {
           fetchFacilities();
         } catch (error) {
           console.error('Error deleting facility:', error);
-          message.error('Failed to delete facility');
+          const errorMsg = error.response?.data?.message || 'Failed to delete facility';
+          message.error(errorMsg);
         }
       },
     });
