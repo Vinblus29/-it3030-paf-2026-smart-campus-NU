@@ -208,12 +208,15 @@ const Register = () => {
     <div style={S.page}>
       <div style={S.left} className="auth-panel-left">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 40 }}>
-            <div style={{ width: 40, height: 40, background: '#f5a623', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <IdcardOutlined style={{ color: '#fff', fontSize: 20 }} />
-            </div>
-            <span style={{ color: '#fff', fontSize: 20, fontWeight: 800 }}>Smart Campus</span>
-          </div>
+          <img 
+            src="/southwestern-campus-logo.png" 
+            alt="Southwestern Campus Logo" 
+            style={{
+              height: 45,
+              objectFit: 'contain',
+              marginBottom: 40
+            }}
+          />
           <h2 style={{ color: '#fff', fontSize: 28, fontWeight: 800, lineHeight: 1.2 }}>Complete Secure Registration</h2>
           <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: 16 }}>Follow the 4-step process to verify your identity and secure your university account.</p>
         </div>
@@ -298,7 +301,21 @@ const Register = () => {
             <div style={{ display: currentStep === 2 ? 'block' : 'none' }}>
               <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>Phone Verification</h3>
               <p style={{ color: '#888', fontSize: 13, marginBottom: 20 }}>Protect your account with SMS verification.</p>
-              <Form.Item name="phone" label="Phone Number" rules={[{ required: true }]}>
+              <Form.Item 
+                name="phone" 
+                label="Phone Number" 
+                rules={[
+                  { required: true, message: 'Phone number is required' },
+                  { 
+                    pattern: /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/, 
+                    message: 'Please enter a valid phone number' 
+                  },
+                  { 
+                    min: 10, 
+                    message: 'Phone number must be at least 10 digits' 
+                  }
+                ]}
+              >
                 <Input disabled={phoneVerified} prefix={<PhoneOutlined />} placeholder="+94 XX XXX XXXX" suffix={
                   <Button
                     type="link"

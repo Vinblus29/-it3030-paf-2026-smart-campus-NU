@@ -12,6 +12,7 @@ import PortalTerms from './pages/auth/PortalTerms';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import OAuth2Callback from './pages/auth/OAuth2Callback';
+import LandingPage from './pages/LandingPage';
 
 // Dashboard Pages
 import AdminDashboard from './pages/dashboard/AdminDashboard';
@@ -41,6 +42,7 @@ function App() {
         <Router>
           <Routes>
             {/* Public Routes */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/portal-terms" element={<PortalTerms />} />
@@ -123,7 +125,7 @@ function App() {
             </Route>
 
             {/* Redirects */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/home" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Router>

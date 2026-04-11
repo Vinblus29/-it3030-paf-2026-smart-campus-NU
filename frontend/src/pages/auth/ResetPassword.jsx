@@ -57,14 +57,14 @@ const ResetPassword = () => {
       {/* Left Side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 flex-col justify-between p-12">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <span className="text-2xl font-semibold text-white">Smart Campus</span>
-          </div>
+          <img 
+            src="/southwestern-campus-logo.png" 
+            alt="Southwestern Campus Logo" 
+            style={{
+              height: 45,
+              objectFit: 'contain'
+            }}
+          />
         </div>
         
         <div className="text-white/80">
