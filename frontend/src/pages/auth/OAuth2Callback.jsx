@@ -42,7 +42,7 @@ const OAuth2Callback = () => {
 
       localStorage.setItem('user', JSON.stringify(user));
 
-      message.success('Welcome! You have successfully signed in with Microsoft.');
+      message.success('Welcome! You have successfully signed in.');
       navigate('/dashboard');
     } else {
       message.error('Invalid OAuth callback. Please try again.');
