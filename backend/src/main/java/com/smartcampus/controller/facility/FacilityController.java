@@ -1,6 +1,7 @@
 package com.smartcampus.controller.facility;
 
 import com.smartcampus.dto.facility.FacilityDTO;
+import com.smartcampus.dto.facility.BlackoutPeriodDTO;
 import com.smartcampus.service.facility.FacilityService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.ResponseEntity;
@@ -105,5 +106,37 @@ public class FacilityController {
     @GetMapping("/under-utilized")
     public ResponseEntity<List<FacilityDTO>> getUnderUtilized() {
         return ResponseEntity.ok(facilityService.getUnderUtilizedResources());
+    }
+
+    // ========== Blackout Period Management ==========
+
+    @GetMapping("/blackout-periods")
+    public ResponseEntity<List<BlackoutPeriodDTO>> getAllBlackoutPeriods() {
+        return ResponseEntity.ok(facilityService.getAllBlackoutPeriods());
+    }
+
+    @GetMapping("/{id}/blackout-periods")
+    public ResponseEntity<List<BlackoutPeriodDTO>> getBlackoutPeriodsByFacility(@PathVariable Long id) {
+        return ResponseEntity.ok(facilityService.getBlackoutPeriodsByFacility(id));
+    }
+
+    @PostMapping("/{id}/blackout-periods")
+    public ResponseEntity<BlackoutPeriodDTO> createBlackoutPeriod(
+            @PathVariable Long id,
+            @RequestBody BlackoutPeriodDTO dto) {
+        return ResponseEntity.ok(facilityService.createBlackoutPeriod(id, dto));
+    }
+
+    @PutMapping("/blackout-periods/{blackoutId}")
+    public ResponseEntity<BlackoutPeriodDTO> updateBlackoutPeriod(
+            @PathVariable Long blackoutId,
+            @RequestBody BlackoutPeriodDTO dto) {
+        return ResponseEntity.ok(facilityService.updateBlackoutPeriod(blackoutId, dto));
+    }
+
+    @DeleteMapping("/blackout-periods/{blackoutId}")
+    public ResponseEntity<Void> deleteBlackoutPeriod(@PathVariable Long blackoutId) {
+        facilityService.deleteBlackoutPeriod(blackoutId);
+        return ResponseEntity.ok().build();
     }
 }

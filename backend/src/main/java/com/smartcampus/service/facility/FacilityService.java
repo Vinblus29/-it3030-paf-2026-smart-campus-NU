@@ -1,7 +1,9 @@
 package com.smartcampus.service.facility;
 
 import com.smartcampus.dto.facility.FacilityDTO;
+import com.smartcampus.dto.facility.BlackoutPeriodDTO;
 import com.smartcampus.model.Facility;
+import com.smartcampus.model.BlackoutPeriod;
 import com.smartcampus.repository.FacilityRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -284,6 +286,68 @@ public class FacilityService {
         java.io.ByteArrayOutputStream pngOutputStream = new java.io.ByteArrayOutputStream();
         com.google.zxing.client.j2se.MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
         return pngOutputStream.toByteArray();
+    }
+
+    // ========== Blackout Period Management ==========
+
+    public List<BlackoutPeriodDTO> getBlackoutPeriodsByFacility(Long facilityId) {
+        return blackoutPeriodRepository.findByFacilityId(facilityId).stream()
+            .map(this::mapToBlackoutDTO)
+            .collect(Collectors.toList());
+    }
+
+    public List<BlackoutPeriodDTO> getAllBlackoutPeriods() {
+        return blackoutPeriodRepository.findAll().stream()
+            .map(this::mapToBlackoutDTO)
+            .collect(Collectors.toList());
+    }
+
+    public BlackoutPeriodDTO createBlackoutPeriod(Long facilityId, BlackoutPeriodDTO dto) {
+        Facility facility = facilityRepository.findById(facilityId)
+            .orElseThrow(() -> new RuntimeException("Facility not found"));
+
+        BlackoutPeriod blackout = new BlackoutPeriod();
+        blackout.setFacility(facility);
+        blackout.setStartTime(dto.getStartTime());
+        blackout.setEndTime(dto.getEndTime());
+        blackout.setReason(dto.getReason());
+
+        blackout = blackoutPeriodRepository.save(blackout);
+        return mapToBlackoutDTO(blackout);
+    }
+
+    public BlackoutPeriodDTO updateBlackoutPeriod(Long id, BlackoutPeriodDTO dto) {
+        BlackoutPeriod blackout = blackoutPeriodRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Blackout period not found"));
+
+        if (dto.getStartTime() != null) {
+            blackout.setStartTime(dto.getStartTime());
+        }
+        if (dto.getEndTime() != null) {
+            blackout.setEndTime(dto.getEndTime());
+        }
+        if (dto.getReason() != null) {
+            blackout.setReason(dto.getReason());
+        }
+
+        blackout = blackoutPeriodRepository.save(blackout);
+        return mapToBlackoutDTO(blackout);
+    }
+
+    public void deleteBlackoutPeriod(Long id) {
+        blackoutPeriodRepository.deleteById(id);
+    }
+
+    private BlackoutPeriodDTO mapToBlackoutDTO(BlackoutPeriod bp) {
+        BlackoutPeriodDTO dto = new BlackoutPeriodDTO();
+        dto.setId(bp.getId());
+        dto.setFacilityId(bp.getFacility().getId());
+        dto.setFacilityName(bp.getFacility().getName());
+        dto.setStartTime(bp.getStartTime());
+        dto.setEndTime(bp.getEndTime());
+        dto.setReason(bp.getReason());
+        dto.setCreatedAt(bp.getCreatedAt());
+        return dto;
     }
 
     private FacilityDTO mapToDTO(Facility facility) {

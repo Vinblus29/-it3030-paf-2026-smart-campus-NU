@@ -12,6 +12,7 @@ import com.smartcampus.repository.FacilityRepository;
 import com.smartcampus.repository.NotificationRepository;
 import com.smartcampus.repository.UserRepository;
 import com.smartcampus.repository.BookingWaitlistRepository;
+import com.smartcampus.repository.BlackoutPeriodRepository;
 import com.smartcampus.service.auth.AuthService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,19 +30,22 @@ public class BookingService {
     private final BookingWaitlistRepository bookingWaitlistRepository;
     private final AuthService authService;
     private final com.smartcampus.service.notification.PushNotificationService pushNotificationService;
+    private final BlackoutPeriodRepository blackoutPeriodRepository;
 
     public BookingService(BookingRepository bookingRepository,
                          FacilityRepository facilityRepository,
                          NotificationRepository notificationRepository,
                          BookingWaitlistRepository bookingWaitlistRepository,
                          AuthService authService,
-                        com.smartcampus.service.notification.PushNotificationService pushNotificationService) {
+                        com.smartcampus.service.notification.PushNotificationService pushNotificationService,
+                        BlackoutPeriodRepository blackoutPeriodRepository) {
         this.bookingRepository = bookingRepository;
         this.facilityRepository = facilityRepository;
         this.notificationRepository = notificationRepository;
         this.bookingWaitlistRepository = bookingWaitlistRepository;
         this.authService = authService;
         this.pushNotificationService = pushNotificationService;
+        this.blackoutPeriodRepository = blackoutPeriodRepository;
     }
 
     public List<BookingDTO> getAllBookings() {
@@ -88,6 +92,17 @@ public class BookingService {
 
         if (!facility.isAvailable()) {
             throw new RuntimeException("Facility is not available");
+        }
+
+        // Blackout Period Validation
+        List<com.smartcampus.model.BlackoutPeriod> blackoutPeriods = blackoutPeriodRepository
+            .findByFacilityIdAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+                request.getFacilityId(), request.getEndTime(), request.getStartTime());
+        
+        if (!blackoutPeriods.isEmpty()) {
+            String reason = blackoutPeriods.get(0).getReason();
+            throw new RuntimeException("This time slot falls within a blackout period" + 
+                (reason != null ? ": " + reason : ". Please choose another time."));
         }
 
         // Feature 7: Capacity Validation
@@ -167,6 +182,17 @@ public class BookingService {
 
         if (request.getNumberOfPeople() > facility.getCapacity()) {
             throw new RuntimeException("Number of people exceeds facility capacity (" + facility.getCapacity() + ")");
+        }
+
+        // Blackout Period Validation for Update
+        List<com.smartcampus.model.BlackoutPeriod> blackoutPeriods = blackoutPeriodRepository
+            .findByFacilityIdAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+                request.getFacilityId(), request.getEndTime(), request.getStartTime());
+        
+        if (!blackoutPeriods.isEmpty()) {
+            String reason = blackoutPeriods.get(0).getReason();
+            throw new RuntimeException("This time slot falls within a blackout period" + 
+                (reason != null ? ": " + reason : ". Please choose another time."));
         }
 
         LocalDateTime bufferedStart = request.getStartTime().minusMinutes(15);

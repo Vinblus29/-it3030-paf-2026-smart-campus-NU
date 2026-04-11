@@ -84,6 +84,32 @@ const facilityService = {
   getFacilityTypes: async () => {
     const response = await axios.get(`${API_URL}/types`);
     return response.data;
+  },
+
+  // Blackout Period Management
+  getAllBlackoutPeriods: async () => {
+    const response = await axios.get(`${API_URL}/blackout-periods`);
+    return response.data;
+  },
+
+  getBlackoutPeriodsByFacility: async (facilityId) => {
+    const response = await axios.get(`${API_URL}/${facilityId}/blackout-periods`);
+    return response.data;
+  },
+
+  createBlackoutPeriod: async (facilityId, blackoutData) => {
+    const response = await axios.post(`${API_URL}/${facilityId}/blackout-periods`, blackoutData);
+    return response.data;
+  },
+
+  updateBlackoutPeriod: async (blackoutId, blackoutData) => {
+    const response = await axios.put(`${API_URL}/blackout-periods/${blackoutId}`, blackoutData);
+    return response.data;
+  },
+
+  deleteBlackoutPeriod: async (blackoutId) => {
+    const response = await axios.delete(`${API_URL}/blackout-periods/${blackoutId}`);
+    return response.data;
   }
 };
 
