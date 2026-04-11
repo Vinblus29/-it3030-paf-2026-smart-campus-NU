@@ -34,6 +34,11 @@ const ticketService = {
     return axios.post(API_URL, formData).then(r => r.data);
   },
 
+  updatePriority: (id, priority) => {
+    if (!Number.isInteger(Number(id)) || Number(id) <= 0) throw new Error(`Invalid ticket id: ${id}`);
+    return axios.put(`${API_URL}/${id}/priority`, { priority }).then(r => r.data);
+  },
+
   updateStatus: (id, payload) => {
     if (!Number.isInteger(Number(id)) || Number(id) <= 0) throw new Error(`Invalid ticket id: ${id}`);
     return axios.put(`${API_URL}/${id}/status`, payload).then(r => r.data);

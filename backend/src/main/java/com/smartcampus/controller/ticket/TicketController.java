@@ -86,6 +86,12 @@ public class TicketController {
         return service.updateStatus(id, request);
     }
 
+    @PutMapping("/{id}/priority")
+    public TicketResponse updatePriority(@PathVariable Long id,
+                                         @RequestBody Map<String, String> body) {
+        return service.updatePriority(id, body.get("priority"));
+    }
+
     @PutMapping("/{id}/assign")
     public TicketResponse assign(@PathVariable Long id,
                                  @RequestBody Map<String, Long> body) {
