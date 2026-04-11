@@ -86,6 +86,14 @@ const bookingService = {
       params: { token }
     });
     return response.data;
+  },
+
+  getAnalytics: async (from, to) => {
+    const params = new URLSearchParams();
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    const response = await axios.get(`${API_URL}/analytics?${params.toString()}`);
+    return response.data;
   }
 }; 
 

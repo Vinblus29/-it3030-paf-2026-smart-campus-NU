@@ -93,6 +93,11 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.createBooking(request));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<BookingDTO> updateBooking(@PathVariable Long id, @Valid @RequestBody BookingRequest request) {
+        return ResponseEntity.ok(bookingService.updateBooking(id, request));
+    }
+
     @PutMapping("/{id}/approve")
     public ResponseEntity<BookingDTO> approveBooking(@PathVariable Long id) {
         return ResponseEntity.ok(bookingService.approveBooking(id));

@@ -1,15 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal, Form, DatePicker, Input, InputNumber, Button, Alert } from 'antd';
-import { CheckCircleOutlined, CalendarOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, CalendarOutlined, EditOutlined } from '@ant-design/icons';
 import bookingService from '../services/bookingService'; 
 import dayjs from 'dayjs'; 
 
 const { RangePicker } = DatePicker;
 
-const BookingModal = ({ visible, facility, onCancel, onSuccess }) => {
+const BookingModal = ({ visible, facility, onCancel, onSuccess, editingBooking = null }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [alertInfo, setAlertInfo] = useState(null); // { type: 'error'|'success', message, description }
+  const [alertInfo, setAlertInfo] = useState(null);
+  const isEdit = !!editingBooking;
+
+  useEffect(() => {
+    if (visible && editingBooking) {
+      form.setFieldsValue({
+        range: [dayjs(editingBooking.startTime), dayjs(editingBooking.endTime)],
+        purpose: editingBooking.purpose,
+        numberOfPeople: editingBooking.numberOfPeople || 1
+      });
+    } else if (visible) {
+      form.resetFields();
+    }
+  }, [visible, editingBooking, form]);
 
   const handleSubmit = async (values) => {
     try {
@@ -26,13 +39,21 @@ const BookingModal = ({ visible, facility, onCancel, onSuccess }) => {
         numberOfPeople: values.numberOfPeople || 1
       };
 
-      await bookingService.createBooking(payload);
-
-      setAlertInfo({
-        type: 'success',
-        message: 'Booking Submitted!',
-        description: 'Your booking request has been received and is pending approval.',
-      });
+      if (isEdit) {
+        await bookingService.updateBooking(editingBooking.id, payload);
+        setAlertInfo({
+          type: 'success',
+          message: 'Booking Updated!',
+          description: 'Your booking has been successfully updated.',
+        });
+      } else {
+        await bookingService.createBooking(payload);
+        setAlertInfo({
+          type: 'success',
+          message: 'Booking Submitted!',
+          description: 'Your booking request has been received and is pending approval.',
+        });
+      }
 
       form.resetFields();
 
@@ -47,10 +68,15 @@ const BookingModal = ({ visible, facility, onCancel, onSuccess }) => {
       const errorMsg =
         error.response?.data?.message ||
         'Failed to submit booking request. The time slot might already be taken.';
+      
+      const isWaitlist = errorMsg.toLowerCase().includes('waitlist');
+      
       setAlertInfo({
-        type: 'error',
-        message: 'Booking Failed',
-        description: errorMsg,
+        type: isWaitlist ? 'warning' : 'error',
+        message: isWaitlist ? 'Added to Waitlist' : 'Booking Failed',
+        description: isWaitlist 
+          ? errorMsg 
+          : errorMsg,
       });
     } finally {
       setLoading(false);
@@ -68,7 +94,7 @@ const BookingModal = ({ visible, facility, onCancel, onSuccess }) => {
       title={
         <div className="flex items-center gap-2">
           <CalendarOutlined className="text-indigo-500" />
-          <span>Book {facility?.name}</span>
+          <span>{isEdit ? `Edit Booking` : `Book ${facility?.name}`}</span>
         </div>
       }
       open={visible}
@@ -130,7 +156,7 @@ const BookingModal = ({ visible, facility, onCancel, onSuccess }) => {
         <Form.Item className="mb-0 flex justify-end gap-2">
           <Button onClick={handleCancel}>Cancel</Button>
           <Button type="primary" htmlType="submit" loading={loading} disabled={alertInfo?.type === 'success'}>
-            Submit Request
+            {isEdit ? 'Update Booking' : 'Submit Request'}
           </Button>
         </Form.Item>
       </Form>
