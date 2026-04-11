@@ -45,6 +45,10 @@ public class FacilityService {
             .collect(Collectors.toList());
     }
 
+    public List<String> getAllTypes() {
+        return facilityRepository.findDistinctTypes();
+    }
+
     public List<FacilityDTO> getAvailableFacilities() {
         return facilityRepository.findByAvailableTrue().stream()
             .map(this::mapToDTO)

@@ -25,6 +25,11 @@ public class FacilityController {
         return ResponseEntity.ok(facilityService.getAllFacilities());
     }
 
+    @GetMapping("/types")
+    public ResponseEntity<List<String>> getAllTypes() {
+        return ResponseEntity.ok(facilityService.getAllTypes());
+    }
+
     @GetMapping("/available")
     public ResponseEntity<List<FacilityDTO>> getAvailableFacilities() {
         return ResponseEntity.ok(facilityService.getAvailableFacilities());
