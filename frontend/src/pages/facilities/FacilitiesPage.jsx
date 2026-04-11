@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Table, Button, Space, Tag, Modal, message, Row, Col, Input, Select, InputNumber, List, Typography, Badge, Tooltip, Divider } from 'antd';
+import { Card, Table, Button, Space, Tag, Modal, message, Row, Col, Input, Select, InputNumber, List, Typography, Badge, Tooltip, Divider, DatePicker, Form, Empty } from 'antd';
 import {
   EditOutlined,
   DeleteOutlined,
@@ -15,7 +15,8 @@ import {
   DashboardOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
+  LockOutlined
 } from '@ant-design/icons';
 import facilityService from '../../services/facilityService';
 import BookingModal from '../../components/BookingModal';
@@ -23,6 +24,7 @@ import FacilityModal from '../../components/FacilityModal';
 import { useAuth } from '../../context/AuthContext';
 
 const { Option } = Select;
+const { TextArea } = Input;
 const { confirm } = Modal;
 const { Title, Text, Paragraph } = Typography;
 
@@ -45,6 +47,12 @@ const FacilitiesPage = () => {
   const [bookingModalVisible, setBookingModalVisible] = useState(false);
   const [facilityModalVisible, setFacilityModalVisible] = useState(false);
   const [editingFacility, setEditingFacility] = useState(null);
+
+  // Blackout Period Management
+  const [blackoutModalVisible, setBlackoutModalVisible] = useState(false);
+  const [blackoutPeriods, setBlackoutPeriods] = useState([]);
+  const [blackoutForm] = Form.useForm();
+  const [blackoutLoading, setBlackoutLoading] = useState(false);
 
   useEffect(() => {
     fetchFacilities();
@@ -73,12 +81,59 @@ const FacilitiesPage = () => {
     }
   };
 
-  const getAvailabilityColor = (available) => {
-    return available ? 'green' : 'red';
+  const fetchBlackoutPeriods = async (facilityId) => {
+    try {
+      const data = await facilityService.getBlackoutPeriodsByFacility(facilityId);
+      setBlackoutPeriods(data);
+    } catch (error) {
+      console.error('Error fetching blackout periods:', error);
+    }
+  };
+
+  const handleCreateBlackoutPeriod = async (values) => {
+    try {
+      setBlackoutLoading(true);
+      const payload = {
+        startTime: values.range[0].format('YYYY-MM-DDTHH:mm:ss'),
+        endTime: values.range[1].format('YYYY-MM-DDTHH:mm:ss'),
+        reason: values.reason
+      };
+      await facilityService.createBlackoutPeriod(selectedFacility.id, payload);
+      message.success('Blackout period created successfully');
+      setBlackoutModalVisible(false);
+      blackoutForm.resetFields();
+      fetchBlackoutPeriods(selectedFacility.id);
+    } catch (error) {
+      console.error('Error creating blackout period:', error);
+      message.error('Failed to create blackout period');
+    } finally {
+      setBlackoutLoading(false);
+    }
+  };
+
+  const handleDeleteBlackoutPeriod = (blackoutId) => {
+    confirm({
+      title: 'Delete this blackout period?',
+      icon: <ExclamationCircleOutlined />,
+      okText: 'Yes, Delete',
+      okType: 'danger',
+      onOk: async () => {
+        try {
+          await facilityService.deleteBlackoutPeriod(blackoutId);
+          message.success('Blackout period deleted');
+          fetchBlackoutPeriods(selectedFacility.id);
+        } catch (error) {
+          message.error('Failed to delete blackout period');
+        }
+      }
+    });
   };
 
   const handleView = (facility) => {
     setSelectedFacility(facility);
+    if (isAdmin) {
+      fetchBlackoutPeriods(facility.id);
+    }
     setViewModalVisible(true);
   };
 
@@ -593,6 +648,62 @@ const FacilitiesPage = () => {
                 </div>
               )}
 
+              {/* Blackout Periods Section (Admin Only) */}
+              {isAdmin && (
+                <div className="mb-6">
+                  <Divider className="my-6" />
+                  <div className="flex justify-between items-center mb-4">
+                    <Title level={5} className="!mb-0 flex items-center gap-2">
+                      <LockOutlined className="text-red-500" />
+                      Blackout Periods
+                    </Title>
+                    <Button 
+                      type="primary" 
+                      size="small" 
+                      icon={<PlusOutlined />}
+                      onClick={() => setBlackoutModalVisible(true)}
+                      className="bg-red-500 border-red-500"
+                    >
+                      Add Blackout
+                    </Button>
+                  </div>
+                  
+                  {blackoutPeriods.length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {blackoutPeriods.map(bp => {
+                        const startDate = new Date(bp.startTime);
+                        const endDate = new Date(bp.endTime);
+                        return (
+                        <div key={bp.id} className="flex justify-between items-center p-3 bg-red-50 border border-red-100 rounded-lg">
+                          <div>
+                            <div className="font-medium text-red-800">
+                              {startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}
+                            </div>
+                            <div className="text-xs text-red-600">
+                              {startDate.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})} - 
+                              {endDate.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})}
+                            </div>
+                            {bp.reason && <div className="text-xs text-gray-500 mt-1">{bp.reason}</div>}
+                          </div>
+                          <Button 
+                            danger 
+                            size="small" 
+                            icon={<DeleteOutlined />}
+                            onClick={() => handleDeleteBlackoutPeriod(bp.id)}
+                          />
+                        </div>
+                      )})}
+                    </div>
+                  ) : (
+                    <Empty 
+                      image={Empty.PRESENTED_IMAGE_SIMPLE} 
+                      description="No blackout periods scheduled"
+                      className="bg-gray-50 p-4 rounded-lg"
+                    />
+                  )}
+                </div>
+              )}
+
               <Divider className="my-8" />
 
               <div className="flex gap-4">
@@ -664,6 +775,64 @@ const FacilitiesPage = () => {
           fetchFacilityTypes(); // Refresh types after add/edit
         }}
       />
+
+      {/* Blackout Period Modal */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <LockOutlined className="text-red-500" />
+            <span>Add Blackout Period</span>
+          </div>
+        }
+        open={blackoutModalVisible}
+        onCancel={() => {
+          setBlackoutModalVisible(false);
+          blackoutForm.resetFields();
+        }}
+        footer={null}
+        destroyOnClose
+      >
+        <Form
+          form={blackoutForm}
+          layout="vertical"
+          onFinish={handleCreateBlackoutPeriod}
+        >
+          <Form.Item
+            name="range"
+            label="Blackout Time Range"
+            rules={[{ required: true, message: 'Please select blackout period' }]}
+          >
+            <DatePicker.RangePicker
+              showTime={{
+                format: 'hh:mm A',
+                use12Hours: true,
+              }}
+              format="YYYY-MM-DD hh:mm A"
+              className="w-full"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="reason"
+            label="Reason"
+            rules={[{ required: true, message: 'Please provide a reason' }]}
+          >
+            <Input.TextArea rows={3} placeholder="e.g., Maintenance, Exam period, Event preparation..." />
+          </Form.Item>
+
+          <Form.Item className="mb-0 flex justify-end gap-2">
+            <Button onClick={() => {
+              setBlackoutModalVisible(false);
+              blackoutForm.resetFields();
+            }}>
+              Cancel
+            </Button>
+            <Button type="primary" htmlType="submit" loading={blackoutLoading} className="bg-red-500 border-red-500">
+              Create Blackout
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
