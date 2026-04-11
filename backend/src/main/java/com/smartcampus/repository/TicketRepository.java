@@ -38,8 +38,8 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
            "(:status IS NULL OR t.status = :status) AND " +
            "(:category IS NULL OR t.category = :category) AND " +
            "(:priority IS NULL OR t.priority = :priority) AND " +
-           "(:q IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%',:q,'%')) " +
-           "OR LOWER(t.location) LIKE LOWER(CONCAT('%',:q,'%'))) " +
+           "(:q IS NULL OR (LOWER(t.title) LIKE LOWER(CONCAT('%',:q,'%')) " +
+           "OR LOWER(t.location) LIKE LOWER(CONCAT('%',:q,'%')))) " +
            "ORDER BY t.createdAt DESC")
     List<Ticket> searchTickets(@Param("status") TicketStatus status,
                                @Param("category") String category,
@@ -51,8 +51,8 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
            "(:status IS NULL OR t.status = :status) AND " +
            "(:category IS NULL OR t.category = :category) AND " +
            "(:priority IS NULL OR t.priority = :priority) AND " +
-           "(:q IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%',:q,'%')) " +
-           "OR LOWER(t.location) LIKE LOWER(CONCAT('%',:q,'%'))) " +
+           "(:q IS NULL OR (LOWER(t.title) LIKE LOWER(CONCAT('%',:q,'%')) " +
+           "OR LOWER(t.location) LIKE LOWER(CONCAT('%',:q,'%')))) " +
            "ORDER BY t.createdAt DESC")
     List<Ticket> searchMyTickets(@Param("reporterId") Long reporterId,
                                  @Param("status") TicketStatus status,
