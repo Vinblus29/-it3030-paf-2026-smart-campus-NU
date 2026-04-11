@@ -8,6 +8,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -80,6 +81,35 @@ public class GlobalExceptionHandler {
         response.put("contentType", ex.getContentType());
         response.put("status", HttpStatus.UNSUPPORTED_MEDIA_TYPE.value());
         return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(response);
+    }
+
+    @ExceptionHandler(FacilityDeletionException.class)
+    public ResponseEntity<Map<String, Object>> handleFacilityDeletionException(FacilityDeletionException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("message", ex.getMessage());
+        response.put("status", HttpStatus.CONFLICT.value());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        
+        String message = "Cannot delete this resource because it is referenced by other records.";
+        
+        // Check the cause for more specific messages
+        if (ex.getCause() != null && ex.getCause().getMessage() != null) {
+            String causeMessage = ex.getCause().getMessage();
+            if (causeMessage.contains("bookings")) {
+                message = "Cannot delete facility because it has existing bookings. Please delete or cancel all associated bookings first.";
+            }
+        }
+        
+        response.put("message", message);
+        response.put("status", HttpStatus.CONFLICT.value());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     @ExceptionHandler(Exception.class)
