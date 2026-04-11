@@ -37,6 +37,7 @@ export default function TicketsPage() {
   // Technician status update modal state
   const [techModal, setTechModal] = useState(false);
   const [techForm] = Form.useForm();
+  const [closing, setClosing] = useState(false);
 
   useEffect(() => {
     fetchTickets();
@@ -115,6 +116,46 @@ export default function TicketsPage() {
     } catch { message.error('Failed to update status'); }
   };
 
+  const handlePriorityChange = async (newPriority) => {
+    try {
+      const updated = await ticketService.updatePriority(selected.id, newPriority);
+      setSelected(updated);
+      setTickets(prev => prev.map(t => t.id === selected.id ? { ...t, priority: newPriority } : t));
+      message.success(`Priority updated to ${newPriority}`);
+    } catch { message.error('Failed to update priority'); }
+  };
+
+  // Admin: delete ticket
+  const handleDelete = (ticketId) => {
+    Modal.confirm({
+      title: 'Delete Ticket',
+      content: 'Are you sure you want to permanently delete this ticket? This cannot be undone.',
+      okText: 'Delete',
+      okType: 'danger',
+      onOk: async () => {
+        try {
+          await ticketService.deleteTicket(ticketId);
+          message.success('Ticket deleted');
+          closeDrawer();
+          fetchTickets();
+        } catch { message.error('Failed to delete ticket'); }
+      }
+    });
+  };
+
+  // Admin: close ticket — sets status to CLOSED immediately
+  const handleClose = async () => {
+    setClosing(true);
+    try {
+      await ticketService.updateStatus(selected.id, { status: 'CLOSED' });
+      message.success('Ticket has been closed.');
+      const updated = await ticketService.getTicketById(selected.id);
+      setSelected(updated);
+      setTickets(prev => prev.map(t => t.id === selected.id ? { ...t, status: 'CLOSED' } : t));
+    } catch { message.error('Failed to close ticket'); }
+    finally { setClosing(false); }
+  };
+
   // Comments
   const handleAddComment = async () => {
     if (!commentText.trim()) return;
@@ -186,7 +227,12 @@ export default function TicketsPage() {
     {
       title: '', key: 'actions',
       render: (_, r) => (
-        <Button icon={<EyeOutlined />} size="small" onClick={() => handleView(r)}>View</Button>
+        <Space size="small">
+          <Button icon={<EyeOutlined />} size="small" onClick={() => handleView(r)}>View</Button>
+          {isAdmin && (
+            <Button icon={<DeleteOutlined />} size="small" danger onClick={() => handleDelete(r.id)} />
+          )}
+        </Space>
       )
     }
   ];
@@ -202,19 +248,31 @@ export default function TicketsPage() {
     ),
     children: (
       <Table columns={columns} dataSource={filtered(s)} rowKey="id"
-        loading={loading} pagination={{ pageSize: 10 }} />
+        key={s} loading={loading} pagination={{ pageSize: 10 }} />
     )
   }));
 
-  // Drawer extra button — different per role
   const drawerExtra = selected && (
     isAdmin ? (
-      <Button type="primary"
-        onClick={() => { setStatusModal(true); statusForm.setFieldsValue({ status: selected.status }); }}>
-        Update Status
-      </Button>
+      <Space>
+        {!['CLOSED', 'REJECTED'].includes(selected.status) && (
+          <Button
+            type="primary"
+            icon={<CheckCircleOutlined />}
+            loading={closing}
+            onClick={handleClose}
+          >
+            Close Ticket
+          </Button>
+        )}
+        <Button onClick={() => { setStatusModal(true); statusForm.setFieldsValue({ status: selected.status }); }}>
+          Update Status
+        </Button>
+        <Button danger icon={<DeleteOutlined />} onClick={() => handleDelete(selected.id)}>
+          Delete
+        </Button>
+      </Space>
     ) : (
-      // Technician can update status on their assigned tickets (only if already IN_PROGRESS)
       selected.status === 'IN_PROGRESS' && (
         <Button type="primary" icon={<CheckCircleOutlined />}
           onClick={() => { setTechModal(true); techForm.setFieldsValue({ status: selected.status }); }}>
@@ -254,7 +312,22 @@ export default function TicketsPage() {
                 <Tag color={STATUS_COLOR[selected.status]}>{selected.status?.replace('_', ' ')}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Priority">
-                <Tag color={PRIORITY_COLOR[selected.priority]}>{selected.priority}</Tag>
+                {isAdmin ? (
+                  <Select
+                    value={selected.priority}
+                    size="small"
+                    style={{ width: 130 }}
+                    onChange={handlePriorityChange}
+                  >
+                    {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(p => (
+                      <Option key={p} value={p}>
+                        <Tag color={PRIORITY_COLOR[p]}>{p}</Tag>
+                      </Option>
+                    ))}
+                  </Select>
+                ) : (
+                  <Tag color={PRIORITY_COLOR[selected.priority]}>{selected.priority}</Tag>
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="Category">{selected.category}</Descriptions.Item>
               <Descriptions.Item label="Location">{selected.location}</Descriptions.Item>

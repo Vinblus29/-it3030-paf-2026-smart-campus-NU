@@ -266,7 +266,7 @@ export default function MyTicketsPage() {
           {hasActiveFilters && <Button icon={<ClearOutlined />} onClick={clearFilters}>Clear</Button>}
           {hasActiveFilters && (
             <Text type="secondary" className="self-center text-sm">
-              {filteredTickets.length} of {tickets.length} tickets
+              {tickets.length} of {allTickets.length} tickets
             </Text>
           )}
         </div>

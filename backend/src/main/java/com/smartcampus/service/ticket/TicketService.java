@@ -291,6 +291,18 @@ public class TicketService {
     }
 
     @Transactional
+    public TicketResponse updatePriority(Long id, String priority) {
+        User currentUser = authService.getCurrentUser();
+        if (currentUser.getRole() != Role.ADMIN) {
+            throw new RuntimeException("Only admins can change ticket priority");
+        }
+        Ticket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+        ticket.setPriority(Priority.valueOf(priority.toUpperCase()));
+        return toResponse(ticketRepository.save(ticket), currentUser);
+    }
+
+    @Transactional
     public TicketResponse assignTicket(Long id, Long assigneeId) {
         User currentUser = authService.getCurrentUser();
         if (currentUser.getRole() != Role.ADMIN) {
