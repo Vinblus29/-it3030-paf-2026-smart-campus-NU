@@ -339,7 +339,9 @@ const Register = () => {
                 <Input.Password prefix={<LockOutlined />} placeholder="••••••••" />
               </Form.Item>
               <Form.Item name="terms" valuePropName="checked" rules={[{ validator: (_, v) => v ? Promise.resolve() : Promise.reject('Accept terms') }]}>
-                <Checkbox style={{ fontSize: 12 }}>I agree to the <Button type="link" size="small" style={{ padding: 0 }}>Portal Terms of Use</Button></Checkbox>
+                <Checkbox style={{ fontSize: 12 }}>
+                  I agree to the <Link to="/portal-terms" target="_blank" style={{ color: '#0f3460', fontWeight: 600 }}>Portal Terms of Use</Link>
+                </Checkbox>
               </Form.Item>
               <Button type="primary" htmlType="submit" block loading={loading} style={{ height: 46, borderRadius: 6, fontSize: 15, fontWeight: 700, background: '#0f3460' }}>Complete Registration</Button>
               <Button type="link" block onClick={prev} style={{ marginTop: 10 }}>Back</Button>
