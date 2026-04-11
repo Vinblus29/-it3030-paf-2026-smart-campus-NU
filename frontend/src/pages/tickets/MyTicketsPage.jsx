@@ -125,8 +125,14 @@ export default function MyTicketsPage() {
   const handleCreate = async (values) => {
     setSubmitting(true);
     try {
+      const selectedFacility = facilities.find(f => f.id === values.facilityId);
+      const payload = {
+        ...values,
+        location: selectedFacility?.name || values.location,
+        facilityId: values.facilityId
+      };
       const images = fileList.map(f => f.originFileObj).filter(Boolean);
-      await ticketService.createTicket(values, images);
+      await ticketService.createTicket(payload, images);
       message.success('Ticket submitted successfully');
       setCreateOpen(false);
       form.resetFields();
@@ -316,7 +322,7 @@ export default function MyTicketsPage() {
               </Select>
             </Form.Item>
           </div>
-          <Form.Item name="location" label="Location / Resource" rules={[{ required: true, message: 'Location is required' }]}>
+          <Form.Item name="facilityId" label="Location / Resource" rules={[{ required: true, message: 'Location is required' }]}>
             <Select
               showSearch
               placeholder="Select a facility"
@@ -328,7 +334,7 @@ export default function MyTicketsPage() {
               {facilities.map(f => (
                 <Option
                   key={f.id}
-                  value={f.name}
+                  value={f.id}
                   label={`${f.name}${f.location ? ' ' + f.location : ''}`}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

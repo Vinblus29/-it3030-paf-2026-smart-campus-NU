@@ -28,6 +28,7 @@ public class TicketResponse {
     private LocalDateTime updatedAt;
     private Long resolutionTimeHours;
     private boolean escalated;
+    private Long facilityId;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -71,4 +72,6 @@ public class TicketResponse {
     public void setResolutionTimeHours(Long resolutionTimeHours) { this.resolutionTimeHours = resolutionTimeHours; }
     public boolean isEscalated() { return escalated; }
     public void setEscalated(boolean escalated) { this.escalated = escalated; }
+    public Long getFacilityId() { return facilityId; }
+    public void setFacilityId(Long facilityId) { this.facilityId = facilityId; }
 }

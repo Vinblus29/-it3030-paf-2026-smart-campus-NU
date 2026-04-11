@@ -79,6 +79,7 @@ public class TicketService {
         ticket.setContactDetails(request.getContactDetails());
         ticket.setPriority(request.getPriority());
         ticket.setReporter(currentUser);
+        ticket.setFacilityId(request.getFacilityId());
 
         if (images != null && !images.isEmpty()) {
             List<String> urls = new ArrayList<>();
@@ -367,6 +368,7 @@ public class TicketService {
         res.setResolvedAt(t.getResolvedAt());
         res.setCreatedAt(t.getCreatedAt());
         res.setUpdatedAt(t.getUpdatedAt());
+        res.setFacilityId(t.getFacilityId());
 
         // Resolution time
         if (t.getResolvedAt() != null && t.getCreatedAt() != null) {

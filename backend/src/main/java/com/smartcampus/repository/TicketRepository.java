@@ -59,4 +59,12 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
                                  @Param("category") String category,
                                  @Param("priority") Priority priority,
                                  @Param("q") String q);
+
+    List<Ticket> findByFacilityId(Long facilityId);
+
+    @Query("SELECT COUNT(t) FROM Ticket t WHERE (t.facilityId = :facilityId OR (t.facilityId IS NULL AND LOWER(t.location) LIKE LOWER(CONCAT('%', :location, '%')))) AND t.status NOT IN (:statuses)")
+    long countByFacilityIdOrLocationAndStatusNotIn(@Param("facilityId") Long facilityId, @Param("location") String location, @Param("statuses") List<TicketStatus> statuses);
+
+    @Query("SELECT t FROM Ticket t WHERE t.facilityId = :facilityId OR (t.facilityId IS NULL AND LOWER(t.location) LIKE LOWER(CONCAT('%', :location, '%')))")
+    List<Ticket> findByFacilityIdOrLocation(@Param("facilityId") Long facilityId, @Param("location") String location);
 }
