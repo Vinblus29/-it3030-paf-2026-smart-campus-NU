@@ -262,7 +262,19 @@ const Register = () => {
                 <Form.Item name="firstName" label="First Name" rules={[{ required: true }]}><Input prefix={<UserOutlined />} placeholder="e.g. John" /></Form.Item>
                 <Form.Item name="lastName" label="Last Name" rules={[{ required: true }]}><Input prefix={<UserOutlined />} placeholder="e.g. Doe" /></Form.Item>
               </div>
-              <Form.Item name="studentId" label="Student/Staff ID" rules={[{ required: true }]}><Input prefix={<IdcardOutlined />} placeholder="e.g. IT2100XX" /></Form.Item>
+              <Form.Item 
+                name="studentId" 
+                label="Student/Staff ID" 
+                rules={[
+                  { required: true, message: 'Student/Staff ID is required' },
+                  {
+                    pattern: /^it\d{8}$/i,
+                    message: 'Student/Staff ID must start with "it" followed by 8 digits (e.g., it23203112)'
+                  }
+                ]}
+              >
+                <Input prefix={<IdcardOutlined />} placeholder="e.g. it23203112" maxLength={10} />
+              </Form.Item>
               <Button type="primary" block onClick={() => form.validateFields(['firstName', 'lastName', 'studentId']).then(next)} style={{ height: 44, borderRadius: 6, marginTop: 10 }}>Next Step</Button>
             </div>
 

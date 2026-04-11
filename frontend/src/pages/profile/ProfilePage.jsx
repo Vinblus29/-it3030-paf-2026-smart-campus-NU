@@ -355,7 +355,7 @@ const ProfilePage = () => {
                     {phoneStep === 0 ? (
                         <>
                             <Form.Item name="newPhoneNumber" label="New Phone Number" rules={[{ required: true }]}>
-                                <Input prefix={<MobileOutlined />} placeholder="+1 (234) 567" />
+                                <Input prefix={<MobileOutlined />} placeholder="9876543210" maxLength={10} />
                             </Form.Item>
                             <Button
                                 type="primary"
