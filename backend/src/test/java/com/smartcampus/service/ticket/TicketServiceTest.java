@@ -3,12 +3,18 @@ package com.smartcampus.service.ticket;
 import com.smartcampus.dto.ticket.TicketRequest;
 import com.smartcampus.dto.ticket.TicketResponse;
 import com.smartcampus.entity.Ticket;
+import com.smartcampus.entity.TicketActivity;
 import com.smartcampus.enums.TicketStatus;
 import com.smartcampus.enums.Priority;
 import com.smartcampus.enums.Role;
 import com.smartcampus.model.User;
+import com.smartcampus.repository.NotificationRepository;
+import com.smartcampus.repository.TicketActivityRepository;
 import com.smartcampus.repository.TicketRepository;
+import com.smartcampus.repository.UserRepository;
+import com.smartcampus.service.S3Service;
 import com.smartcampus.service.auth.AuthService;
+import com.smartcampus.service.notification.PushNotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,7 +28,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,6 +36,21 @@ class TicketServiceTest {
 
     @Mock
     private TicketRepository repository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private NotificationRepository notificationRepository;
+
+    @Mock
+    private TicketActivityRepository activityRepository;
+
+    @Mock
+    private S3Service s3Service;
+
+    @Mock
+    private PushNotificationService pushNotificationService;
 
     @Mock
     private AuthService authService;
@@ -76,6 +97,7 @@ class TicketServiceTest {
         when(authService.getCurrentUser()).thenReturn(testUser);
         when(repository.existsOpenTicketByReporterAndTitleAndLocation(anyLong(), anyString(), anyString())).thenReturn(false);
         when(repository.save(any(Ticket.class))).thenReturn(sampleTicket);
+        when(activityRepository.save(any(TicketActivity.class))).thenReturn(null);
 
         // When
         TicketResponse response = service.createTicket(sampleRequest, new ArrayList<>());

@@ -137,7 +137,6 @@ const DashboardContent = () => {
   const { isAdmin, isTechnician, isAuthenticated } = useAuth();
 
 // 🔔 Register / listen for push notifications for every authenticated user
-  console.log('🔔 PUSH DEBUG: App DashboardContent calling usePushNotifications, isAuthenticated:', isAuthenticated);
   usePushNotifications(isAuthenticated);
 
   if (isAdmin) {
